@@ -6,6 +6,9 @@
  * deleted via the WordPress admin. Only runs on uninstall, not deactivation.
  * On multisite every site is cleaned up individually.
  *
+ * @since 1.0.0
+ * @since 1.1.0 Deletes the AI agent settings opt-in option.
+ *
  * @package Utmatra
  */
 
@@ -15,6 +18,7 @@ defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
  * Remove the events table, options, transients, and scheduled jobs for the current site.
  *
  * @since 1.0.0
+ * @since 1.1.0 Deletes the AI agent settings opt-in option.
  * @return void
  */
 function utmatra_uninstall_site(): void {
@@ -43,6 +47,7 @@ function utmatra_uninstall_site(): void {
 	delete_option( 'utmatra_recent_leads' );
 	delete_option( 'utmatra_presets' );
 	delete_option( 'utmatra_schedules_next_check' );
+	delete_option( 'utmatra_allow_agent_settings' );
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching
