@@ -19,11 +19,14 @@
  *   GET    utmatra/v1/journeys    — conversions with their preceding touches
  *   GET    utmatra/v1/journeys/<visitor_id> — one visitor's full event list
  *
- * All routes require the `manage_options` capability.
+ * Reads require `utmatra_view_reports`; link and preset writes require
+ * `utmatra_manage_links`; settings, test email and test webhook require
+ * `utmatra_manage_settings` (see Capabilities for the hierarchy).
  *
  * @since 1.0.0
  * @since 1.0.0 Keeps a link's stored values for parameters no longer configured.
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
+ * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  *
  * @package Utmatra\Admin
  */
@@ -33,6 +36,7 @@ namespace Utmatra\Admin;
 use DateTimeImmutable;
 use DateTimeZone;
 use stdClass;
+use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
 use Utmatra\Diagnostics\Checks;
 use Utmatra\Reports\ConversionWebhook;
@@ -53,6 +57,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
+ * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  */
 class RestController {
 
@@ -116,7 +121,7 @@ class RestController {
 				array(
 					'methods'             => 'POST',
 					'callback'            => array( self::class, 'create_link' ),
-					'permission_callback' => array( self::class, 'check_permission' ),
+					'permission_callback' => array( self::class, 'check_links_permission' ),
 				),
 			)
 		);
@@ -128,7 +133,7 @@ class RestController {
 				array(
 					'methods'             => 'PUT',
 					'callback'            => array( self::class, 'update_link' ),
-					'permission_callback' => array( self::class, 'check_permission' ),
+					'permission_callback' => array( self::class, 'check_links_permission' ),
 					'args'                => array(
 						'id' => array(
 							'sanitize_callback' => 'sanitize_key',
@@ -138,7 +143,7 @@ class RestController {
 				array(
 					'methods'             => 'DELETE',
 					'callback'            => array( self::class, 'delete_link' ),
-					'permission_callback' => array( self::class, 'check_permission' ),
+					'permission_callback' => array( self::class, 'check_links_permission' ),
 					'args'                => array(
 						'id' => array(
 							'sanitize_callback' => 'sanitize_key',
@@ -277,7 +282,7 @@ class RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( self::class, 'create_preset' ),
-				'permission_callback' => array( self::class, 'check_permission' ),
+				'permission_callback' => array( self::class, 'check_links_permission' ),
 			)
 		);
 
@@ -287,7 +292,7 @@ class RestController {
 			array(
 				'methods'             => 'DELETE',
 				'callback'            => array( self::class, 'delete_preset' ),
-				'permission_callback' => array( self::class, 'check_permission' ),
+				'permission_callback' => array( self::class, 'check_links_permission' ),
 				'args'                => array(
 					'id' => array(
 						'sanitize_callback' => 'sanitize_key',
@@ -302,7 +307,7 @@ class RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( self::class, 'send_test_email' ),
-				'permission_callback' => array( self::class, 'check_permission' ),
+				'permission_callback' => array( self::class, 'check_settings_permission' ),
 			)
 		);
 
@@ -312,7 +317,7 @@ class RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( self::class, 'send_test_webhook' ),
-				'permission_callback' => array( self::class, 'check_permission' ),
+				'permission_callback' => array( self::class, 'check_settings_permission' ),
 				'args'                => array(
 					'preset' => array(
 						'sanitize_callback' => 'sanitize_key',
@@ -330,7 +335,7 @@ class RestController {
 			array(
 				'methods'             => 'POST',
 				'callback'            => array( self::class, 'save_settings' ),
-				'permission_callback' => array( self::class, 'check_permission' ),
+				'permission_callback' => array( self::class, 'check_settings_permission' ),
 				'args'                => array(
 					'retention_days'   => array(
 						'sanitize_callback' => 'absint',
@@ -381,13 +386,37 @@ class RestController {
 	}
 
 	/**
-	 * Permission check — admin only.
+	 * Permission check for the read routes — view reports (any tier implies it).
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Checks the view reports capability instead of manage_options.
+	 *
 	 * @return bool
 	 */
 	public static function check_permission(): bool {
-		return current_user_can( 'manage_options' );
+		return Capabilities::can( Capabilities::VIEW_REPORTS );
+	}
+
+	/**
+	 * Permission check for the link and preset write routes — manage links.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return bool
+	 */
+	public static function check_links_permission(): bool {
+		return Capabilities::can( Capabilities::MANAGE_LINKS );
+	}
+
+	/**
+	 * Permission check for the settings, test email and test webhook routes — manage settings.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return bool
+	 */
+	public static function check_settings_permission(): bool {
+		return Capabilities::can( Capabilities::MANAGE_SETTINGS );
 	}
 
 	/**

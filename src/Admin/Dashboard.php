@@ -2,11 +2,15 @@
 /**
  * Dashboard — registers the admin menu page and enqueues assets.
  *
+ * @since 1.0.0
+ * @since 1.1.0 Menu and page check the view reports capability.
+ *
  * @package Utmatra\Admin
  */
 
 namespace Utmatra\Admin;
 
+use Utmatra\Capabilities;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Tracking\Attribution;
@@ -19,6 +23,7 @@ defined( 'ABSPATH' ) || exit;
  * Dashboard
  *
  * @since 1.0.0
+ * @since 1.1.0 Menu and page check the view reports capability.
  */
 class Dashboard {
 
@@ -50,13 +55,18 @@ class Dashboard {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Uses the plugin's own SVG menu icon instead of a dashicon.
+	 * @since 1.1.0 Requires the view reports capability (or a tier implying it).
 	 * @return void
 	 */
 	public static function register_menu(): void {
+		// add_menu_page() takes one capability, so pass the one through which
+		// this user holds view (a manage tier implies it).
+		$cap = Capabilities::granting_cap( Capabilities::VIEW_REPORTS );
+
 		self::$hook_suffix = (string) add_menu_page(
 			__( 'Utmatra - UTM Attribution and Tracking', 'utmatra-utm-attribution-and-tracking' ),
 			__( 'Utmatra', 'utmatra-utm-attribution-and-tracking' ),
-			'manage_options',
+			'' !== $cap ? $cap : 'do_not_allow',
 			self::PAGE_SLUG,
 			array( self::class, 'render_page' ),
 			self::MENU_ICON,
@@ -68,6 +78,7 @@ class Dashboard {
 	 * Enqueue Chart.js and dashboard assets on this page only.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Sends the webhook URL and secret only to users who can manage settings.
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -131,6 +142,10 @@ class Dashboard {
 		// the JS renders it as plain text (Chart.js canvas labels).
 		$woo_active = class_exists( 'WooCommerce' );
 
+		// The webhook URL can embed a token and the secret signs payloads,
+		// so users who can only view reports never receive either.
+		$can_manage_settings = Capabilities::can( Capabilities::MANAGE_SETTINGS );
+
 		wp_localize_script(
 			'utmatra-dashboard',
 			'utmatraData',
@@ -147,7 +162,7 @@ class Dashboard {
 					'retentionDays'   => (int) get_option( 'utmatra_retention_days', 180 ),
 					'weeklyEmail'     => WeeklyEmail::enabled(),
 					'cookieDays'      => (int) get_option( 'utmatra_cookie_days', 90 ),
-					'webhookUrl'      => ConversionWebhook::url(),
+					'webhookUrl'      => $can_manage_settings ? ConversionWebhook::url() : '',
 					'webhookPreset'   => ConversionWebhook::preset(),
 					'webhookOrders'   => ConversionWebhook::events()['orders'],
 					'webhookLeads'    => ConversionWebhook::events()['leads'],
@@ -155,7 +170,7 @@ class Dashboard {
 					'trackVisits'     => 1 === (int) get_option( 'utmatra_track_visits', 1 ),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
-				'webhookSecret'  => ConversionWebhook::secret(),
+				'webhookSecret'  => $can_manage_settings ? ConversionWebhook::secret() : '',
 				'webhookLast'    => ConversionWebhook::last_delivery(),
 				'customParams'   => Tracker::custom_params(),
 			)
@@ -209,10 +224,11 @@ class Dashboard {
 	 * Render the dashboard page.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Checks the view reports capability.
 	 * @return void
 	 */
 	public static function render_page(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! Capabilities::can( Capabilities::VIEW_REPORTS ) ) {
 			wp_die( esc_html__( 'You do not have permission to access this page.', 'utmatra-utm-attribution-and-tracking' ) );
 		}
 		require_once UTMATRA_PATH . 'views/dashboard.php';

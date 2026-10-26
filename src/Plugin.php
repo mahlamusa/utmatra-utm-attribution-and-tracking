@@ -4,6 +4,7 @@
  *
  * @since 1.0.0
  * @since 1.1.0 Wires the abilities registrar.
+ * @since 1.1.0 Grants the custom capabilities on activation and upgrade.
  *
  * @package Utmatra
  */
@@ -83,12 +84,16 @@ class Plugin {
 	 * @since 1.0.0
 	 * @since 1.0.0 Registers the schedule-heal hook.
 	 * @since 1.1.0 Hooks the abilities registrar.
+	 * @since 1.1.0 Hooks the capabilities upgrade.
 	 * @return void
 	 */
 	private function init_hooks(): void {
 		// DB version check on every load. This runs during `plugins_loaded`
 		// itself, so hook `init` (priority 0) rather than `plugins_loaded`.
 		add_action( 'init', array( Schema::class, 'maybe_upgrade' ), 0 );
+
+		// Grant the custom capabilities on existing sites, once per site.
+		add_action( 'init', array( Capabilities::class, 'maybe_upgrade' ), 0 );
 
 		// Register utmatra_track query var.
 		add_filter( 'query_vars', array( Tracker::class, 'register_query_vars' ) );
@@ -256,10 +261,12 @@ class Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Resets the schedule-heal throttle.
+	 * @since 1.1.0 Grants the custom capabilities to administrators.
 	 * @return void
 	 */
 	public static function activate(): void {
 		Schema::install();
+		Capabilities::register();
 		if ( ! get_option( 'utmatra_salt' ) ) {
 			add_option( 'utmatra_salt', wp_generate_password( 64, true, true ) );
 		}

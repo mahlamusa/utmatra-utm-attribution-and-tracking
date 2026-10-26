@@ -9,11 +9,15 @@
  * HandL's `Handl_Insight_Engine::analyze()` widget pattern — deterministic
  * PHP, zero AI/network calls.
  *
+ * @since 1.0.0
+ * @since 1.1.0 Shown only to users with the view reports capability.
+ *
  * @package Utmatra\Admin
  */
 
 namespace Utmatra\Admin;
 
+use Utmatra\Capabilities;
 use Utmatra\Insights\Insights;
 use Utmatra\Insights\Recorder;
 
@@ -23,6 +27,7 @@ defined( 'ABSPATH' ) || exit;
  * DashboardWidget
  *
  * @since 1.0.0
+ * @since 1.1.0 Shown only to users with the view reports capability.
  */
 class DashboardWidget {
 
@@ -64,12 +69,18 @@ class DashboardWidget {
 	 * Register the dashboard widget.
 	 *
 	 * Hooked on `wp_dashboard_setup`. wp_add_dashboard_widget() has no
-	 * built-in capability gate, so render() re-checks manage_options itself.
+	 * built-in capability gate, so the widget is only added for users who
+	 * can view reports, and render() re-checks it.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Skipped for users without the view reports capability.
 	 * @return void
 	 */
 	public static function register(): void {
+		if ( ! Capabilities::can( Capabilities::VIEW_REPORTS ) ) {
+			return;
+		}
+
 		wp_add_dashboard_widget(
 			'utmatra-recent-leads',
 			__( 'Recent leads (Utmatra)', 'utmatra-utm-attribution-and-tracking' ),
@@ -85,10 +96,11 @@ class DashboardWidget {
 	 * Render the widget body.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Checks the view reports capability.
 	 * @return void
 	 */
 	public static function render(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
+		if ( ! Capabilities::can( Capabilities::VIEW_REPORTS ) ) {
 			return;
 		}
 
@@ -155,13 +167,14 @@ class DashboardWidget {
 	 * can see the widget.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Checks the view reports capability.
 	 *
 	 * @param string $hook Current admin page hook suffix.
 	 *
 	 * @return void
 	 */
 	public static function enqueue_styles( string $hook ): void {
-		if ( 'index.php' !== $hook || ! current_user_can( 'manage_options' ) ) {
+		if ( 'index.php' !== $hook || ! Capabilities::can( Capabilities::VIEW_REPORTS ) ) {
 			return;
 		}
 

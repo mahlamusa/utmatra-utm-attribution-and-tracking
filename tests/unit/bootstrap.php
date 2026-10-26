@@ -28,6 +28,11 @@ function utmatra_test_reset(): void {
 		'actions'    => array(),
 		'categories' => array(),
 		'abilities'  => array(),
+		'routes'     => array(),
+		'roles'      => array(
+			'administrator' => array( 'manage_options' => true ),
+			'editor'        => array( 'edit_posts' => true ),
+		),
 	);
 }
 utmatra_test_reset();
@@ -109,6 +114,143 @@ function get_option( $name, $default = false ) {
  */
 function current_user_can( $cap ) {
 	return in_array( $cap, $GLOBALS['utmatra_test']['caps'], true );
+}
+
+/**
+ * Stub of update_option().
+ *
+ * @since 1.1.0
+ *
+ * @param string $name  Option name.
+ * @param mixed  $value Option value.
+ *
+ * @return true
+ */
+function update_option( $name, $value ) {
+	$GLOBALS['utmatra_test']['options'][ $name ] = $value;
+	return true;
+}
+
+/**
+ * Stub of delete_option().
+ *
+ * @since 1.1.0
+ *
+ * @param string $name Option name.
+ *
+ * @return true
+ */
+function delete_option( $name ) {
+	unset( $GLOBALS['utmatra_test']['options'][ $name ] );
+	return true;
+}
+
+/**
+ * Stub of get_role(); roles live in the test state.
+ *
+ * @since 1.1.0
+ *
+ * @param string $name Role name.
+ *
+ * @return Utmatra_Test_Role|null
+ */
+function get_role( $name ) {
+	return isset( $GLOBALS['utmatra_test']['roles'][ $name ] ) ? new Utmatra_Test_Role( $name ) : null;
+}
+
+/**
+ * Stub of wp_roles(); exposes every test role as `role_objects`.
+ *
+ * @since 1.1.0
+ *
+ * @return object
+ */
+function wp_roles() {
+	$roles = array();
+	foreach ( array_keys( $GLOBALS['utmatra_test']['roles'] ) as $name ) {
+		$roles[ $name ] = new Utmatra_Test_Role( $name );
+	}
+	return (object) array( 'role_objects' => $roles );
+}
+
+/**
+ * Minimal WP_Role whose capabilities are stored in the test state.
+ *
+ * @since 1.1.0
+ */
+class Utmatra_Test_Role {
+
+	/**
+	 * Role name.
+	 *
+	 * @var string
+	 */
+	public $name;
+
+	/**
+	 * Capability => grant, as read when the role was fetched.
+	 *
+	 * @var array<string, bool>
+	 */
+	public $capabilities;
+
+	/**
+	 * Load a role from the test state.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $name Role name.
+	 */
+	public function __construct( $name ) {
+		$this->name         = $name;
+		$this->capabilities = $GLOBALS['utmatra_test']['roles'][ $name ];
+	}
+
+	/**
+	 * Grant a capability.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $cap Capability.
+	 *
+	 * @return void
+	 */
+	public function add_cap( $cap ) {
+		$GLOBALS['utmatra_test']['roles'][ $this->name ][ $cap ] = true;
+		$this->capabilities[ $cap ]                              = true;
+	}
+
+	/**
+	 * Remove a capability.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $cap Capability.
+	 *
+	 * @return void
+	 */
+	public function remove_cap( $cap ) {
+		unset( $GLOBALS['utmatra_test']['roles'][ $this->name ][ $cap ], $this->capabilities[ $cap ] );
+	}
+}
+
+/**
+ * Stub of register_rest_route(); records each method's endpoint by "METHOD route".
+ *
+ * @since 1.1.0
+ *
+ * @param string $route_namespace Route namespace.
+ * @param string $route           Route pattern.
+ * @param array  $args            One endpoint, or a list of endpoints.
+ *
+ * @return true
+ */
+function register_rest_route( $route_namespace, $route, $args ) {
+	$endpoints = isset( $args['methods'] ) ? array( $args ) : $args;
+	foreach ( $endpoints as $endpoint ) {
+		$GLOBALS['utmatra_test']['routes'][ $endpoint['methods'] . ' /' . $route_namespace . $route ] = $endpoint;
+	}
+	return true;
 }
 
 /**
@@ -311,3 +453,4 @@ require_once $utmatra_src . 'Services/Support/DateRange.php';
 require_once $utmatra_src . 'Abilities/AbilityDefinition.php';
 require_once $utmatra_src . 'Abilities/OptIn.php';
 require_once $utmatra_src . 'Abilities/AbilitiesRegistrar.php';
+require_once $utmatra_src . 'Admin/RestController.php';
