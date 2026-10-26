@@ -9,6 +9,8 @@
 
 	<!-- Bundled third-party libraries (Action Scheduler) are not ours to lint. -->
 	<exclude-pattern>*/vendor/*</exclude-pattern>
+	<!-- Developer-only test runner, stubs and snapshot harness; not shipped. -->
+	<exclude-pattern>*/tests/*</exclude-pattern>
 
 	<arg value="sp"/>
 	<arg name="extensions" value="php"/>

@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-20T16:44:28+00:00\n"
+"POT-Creation-Date: 2026-10-26T18:57:08+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utmatra-utm-attribution-and-tracking\n"
@@ -31,11 +31,20 @@ msgstr ""
 msgid "Lindeni Mahlalela"
 msgstr ""
 
+#: src/Abilities/AbilitiesRegistrar.php:80
 #: src/Admin/Dashboard.php:58
 #: src/Admin/Dashboard.php:237
 #: src/Integrations/Forms/Bricks.php:82
 #: src/Privacy/PrivacyPolicy.php:90
 msgid "Utmatra"
+msgstr ""
+
+#: src/Abilities/AbilitiesRegistrar.php:81
+msgid "UTM attribution reports, tracked links, presets and settings."
+msgstr ""
+
+#: src/Abilities/OptIn.php:72
+msgid "AI agents are not allowed to change Utmatra settings. An administrator can turn on \"Allow AI agents to change settings\" in the Settings card of the Utmatra dashboard."
 msgstr ""
 
 #: src/Admin/Dashboard.php:216
@@ -55,47 +64,47 @@ msgstr ""
 msgid "%s ago"
 msgstr ""
 
-#: src/Admin/RestController.php:1199
+#: src/Admin/RestController.php:1108
 msgid "No events recorded for this visitor."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Admin/RestController.php:1488
+#: src/Admin/RestController.php:1397
 msgid "%s is reserved and cannot be used as a custom parameter."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Admin/RestController.php:1493
+#: src/Admin/RestController.php:1402
 msgid "Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s"
 msgstr ""
 
 #. translators: %d: maximum number of custom parameters.
-#: src/Admin/RestController.php:1506
+#: src/Admin/RestController.php:1415
 msgid "You can define up to %d custom parameters."
 msgstr ""
 
-#: src/Admin/RestController.php:1604
+#: src/Admin/RestController.php:1513
 msgid "Please provide a preset name."
 msgstr ""
 
-#: src/Admin/RestController.php:1635
+#: src/Admin/RestController.php:1544
 msgid "Preset not found."
 msgstr ""
 
-#: src/Admin/RestController.php:1760
+#: src/Admin/RestController.php:1669
 msgid "Please provide a valid destination URL (http or https)."
 msgstr ""
 
-#: src/Admin/RestController.php:1859
+#: src/Admin/RestController.php:1768
 msgid "Please provide a valid link slug (incoming, visit, order and lead are reserved)."
 msgstr ""
 
-#: src/Admin/RestController.php:1871
+#: src/Admin/RestController.php:1780
 msgid "A link with this slug already exists."
 msgstr ""
 
-#: src/Admin/RestController.php:1907
-#: src/Admin/RestController.php:1955
+#: src/Admin/RestController.php:1816
+#: src/Admin/RestController.php:1864
 msgid "Link not found."
 msgstr ""
 

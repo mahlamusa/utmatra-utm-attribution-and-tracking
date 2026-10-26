@@ -6,6 +6,9 @@
  * autoloader). The one Composer dependency, Action Scheduler, is loaded
  * from the main plugin file; without it, recurring jobs fall back to WP-Cron.
  *
+ * @since 1.0.0
+ * @since 1.1.0 Loads the capabilities, service support and abilities classes.
+ *
  * @package Utmatra
  */
 
@@ -17,13 +20,18 @@ defined( 'ABSPATH' ) || exit;
  * Bootstrap — loads all plugin classes in dependency order.
  *
  * @since 1.0.0
+ * @since 1.1.0 Loads the capabilities, service support and abilities classes.
  */
 class Bootstrap {
 
 	/**
 	 * Require all source files.
 	 *
+	 * Ability definitions in src/Abilities/Definitions/ are not listed here;
+	 * AbilitiesRegistrar loads them when the Abilities API initialises.
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Loads the capabilities, service support and abilities classes.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -58,6 +66,13 @@ class Bootstrap {
 		require_once $base . 'Diagnostics/Checks.php';
 		require_once $base . 'Admin/RestController.php';
 		require_once $base . 'Shortcode/TrackedLink.php';
+		require_once $base . 'Capabilities.php';
+		require_once $base . 'Services/Support/Result.php';
+		require_once $base . 'Services/Support/ResultAdapter.php';
+		require_once $base . 'Services/Support/DateRange.php';
+		require_once $base . 'Abilities/AbilityDefinition.php';
+		require_once $base . 'Abilities/OptIn.php';
+		require_once $base . 'Abilities/AbilitiesRegistrar.php';
 		require_once $base . 'Plugin.php';
 	}
 }

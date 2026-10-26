@@ -2,11 +2,15 @@
 /**
  * Plugin singleton — wires all hooks together.
  *
+ * @since 1.0.0
+ * @since 1.1.0 Wires the abilities registrar.
+ *
  * @package Utmatra
  */
 
 namespace Utmatra;
 
+use Utmatra\Abilities\AbilitiesRegistrar;
 use Utmatra\DB\Schema;
 use Utmatra\DB\Retention;
 use Utmatra\Privacy\PrivacyPolicy;
@@ -39,6 +43,7 @@ defined( 'ABSPATH' ) || exit;
  * Plugin — the singleton returned by Plugin::instance().
  *
  * @since 1.0.0
+ * @since 1.1.0 Wires the abilities registrar.
  */
 class Plugin {
 
@@ -77,6 +82,7 @@ class Plugin {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Registers the schedule-heal hook.
+	 * @since 1.1.0 Hooks the abilities registrar.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -121,6 +127,9 @@ class Plugin {
 		// REST API.
 		add_action( 'rest_api_init', array( RestController::class, 'register_routes' ) );
 		add_action( 'rest_api_init', array( CollectController::class, 'register_routes' ) );
+
+		// WordPress Abilities API: the `utmatra` category and its abilities.
+		AbilitiesRegistrar::register();
 
 		// Front-end tracking beacon.
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue_beacon' ) );
