@@ -8,17 +8,23 @@
  *
  * @since 1.0.0
  * @since 1.1.0 Deletes the AI agent settings opt-in option.
+ * @since 1.1.0 Removes the custom capabilities from every role.
  *
  * @package Utmatra
  */
 
+use Utmatra\Capabilities;
+
 defined( 'WP_UNINSTALL_PLUGIN' ) || exit;
 
+require_once __DIR__ . '/src/Capabilities.php';
+
 /**
- * Remove the events table, options, transients, and scheduled jobs for the current site.
+ * Remove the events table, options, transients, scheduled jobs and capabilities for the current site.
  *
  * @since 1.0.0
  * @since 1.1.0 Deletes the AI agent settings opt-in option.
+ * @since 1.1.0 Removes the custom capabilities from every role.
  * @return void
  */
 function utmatra_uninstall_site(): void {
@@ -48,6 +54,9 @@ function utmatra_uninstall_site(): void {
 	delete_option( 'utmatra_presets' );
 	delete_option( 'utmatra_schedules_next_check' );
 	delete_option( 'utmatra_allow_agent_settings' );
+
+	// Remove the custom capabilities from every role (roles are per site).
+	Capabilities::revoke();
 
 	// Delete any transients with the plugin prefix.
 	// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.DirectDatabaseQuery.NoCaching

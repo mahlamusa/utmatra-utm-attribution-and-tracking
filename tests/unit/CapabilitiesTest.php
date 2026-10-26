@@ -124,4 +124,48 @@ return array(
 		$GLOBALS['utmatra_test']['caps'] = array( 'read' );
 		utmatra_assert_false( Capabilities::can( 'utmatra_other' ) );
 	},
+
+	'granting cap names the cap the user holds'    => static function () {
+		utmatra_assert_same( '', Capabilities::granting_cap( Capabilities::VIEW_REPORTS ) );
+		$GLOBALS['utmatra_test']['caps'] = array( Capabilities::MANAGE_SETTINGS );
+		utmatra_assert_same( Capabilities::MANAGE_SETTINGS, Capabilities::granting_cap( Capabilities::VIEW_REPORTS ) );
+		utmatra_assert_same( '', Capabilities::granting_cap( Capabilities::MANAGE_LINKS ) );
+		utmatra_assert_same( '', Capabilities::granting_cap( 'utmatra_other' ) );
+	},
+
+	'register grants administrators and records the version' => static function () {
+		Capabilities::register();
+		$roles = $GLOBALS['utmatra_test']['roles'];
+		utmatra_assert_true( $roles['administrator'][ Capabilities::VIEW_REPORTS ] ?? false );
+		utmatra_assert_true( $roles['administrator'][ Capabilities::MANAGE_LINKS ] ?? false );
+		utmatra_assert_true( $roles['administrator'][ Capabilities::MANAGE_SETTINGS ] ?? false );
+		utmatra_assert_false( isset( $roles['editor'][ Capabilities::VIEW_REPORTS ] ), 'other roles are untouched' );
+		utmatra_assert_same( '1.1.0', get_option( Capabilities::VERSION_OPTION ) );
+	},
+
+	'maybe upgrade grants a site upgraded from 1.0.0' => static function () {
+		Capabilities::maybe_upgrade();
+		utmatra_assert_true( $GLOBALS['utmatra_test']['roles']['administrator'][ Capabilities::VIEW_REPORTS ] ?? false );
+	},
+
+	'register without an administrator role retries later' => static function () {
+		unset( $GLOBALS['utmatra_test']['roles']['administrator'] );
+		Capabilities::register();
+		utmatra_assert_false( get_option( Capabilities::VERSION_OPTION ) );
+	},
+
+	'maybe upgrade skips a site already granted'   => static function () {
+		$GLOBALS['utmatra_test']['options'][ Capabilities::VERSION_OPTION ] = '1.1.0';
+		Capabilities::maybe_upgrade();
+		utmatra_assert_false( isset( $GLOBALS['utmatra_test']['roles']['administrator'][ Capabilities::VIEW_REPORTS ] ) );
+	},
+
+	'revoke removes the tiers from every role'     => static function () {
+		Capabilities::register();
+		$GLOBALS['utmatra_test']['roles']['editor'][ Capabilities::VIEW_REPORTS ] = true;
+		Capabilities::revoke();
+		utmatra_assert_same( array( 'manage_options' => true ), $GLOBALS['utmatra_test']['roles']['administrator'] );
+		utmatra_assert_same( array( 'edit_posts' => true ), $GLOBALS['utmatra_test']['roles']['editor'] );
+		utmatra_assert_false( get_option( Capabilities::VERSION_OPTION ) );
+	},
 );
