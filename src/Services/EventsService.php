@@ -216,9 +216,10 @@ class EventsService {
 	 * The two JSON columns are always objects: decoded without `assoc` and
 	 * replaced with an empty stdClass when NULL, empty or undecodable, so the
 	 * response encodes `{}` and never `[]`. `ip_hash` and `user_agent` are
-	 * never selected (see EVENT_COLUMNS).
+	 * never selected (see EVENT_COLUMNS). Order rows lose the WooCommerce
+	 * order key from their destination (see public_destination()).
 	 *
-	 * @since 1.1.0 Moved from RestController::format_event().
+	 * @since 1.1.0 Moved from RestController::format_event(); strips the order key from order destinations.
 	 *
 	 * @param array<string, mixed> $row Event row (ARRAY_A).
 	 *
@@ -245,7 +246,7 @@ class EventsService {
 			'ttclid'        => (string) ( $row['ttclid'] ?? '' ),
 			'li_fat_id'     => (string) ( $row['li_fat_id'] ?? '' ),
 			'twclid'        => (string) ( $row['twclid'] ?? '' ),
-			'destination'   => (string) ( $row['destination'] ?? '' ),
+			'destination'   => self::public_destination( $row ),
 			'referrer'      => (string) ( $row['referrer'] ?? '' ),
 			'is_conversion' => (bool) (int) ( $row['is_conversion'] ?? 0 ),
 			'touch'         => (string) ( $row['touch'] ?? '' ),
@@ -259,7 +260,33 @@ class EventsService {
 	}
 
 	/**
-	 * Run the export query for a WHERE clause and spread the custom parameters.
+	 * An event's destination as the read routes return it.
+	 *
+	 * WooCommerce stores order rows with the order-received URL, whose `key`
+	 * argument is the WooCommerce order key: for a guest order it opens the
+	 * order's thank-you page and pay link. Order rows lose that argument;
+	 * every other row, and an order destination without a key, is returned
+	 * exactly as stored (remove_query_arg() re-encodes the query string).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param array<string, mixed> $row Event row (ARRAY_A).
+	 *
+	 * @return string
+	 */
+	private static function public_destination( array $row ): string {
+		$destination = (string) ( $row['destination'] ?? '' );
+		if ( 'order' !== self::event_kind( $row ) ) {
+			return $destination;
+		}
+
+		wp_parse_str( (string) wp_parse_url( $destination, PHP_URL_QUERY ), $query );
+		return isset( $query['key'] ) ? remove_query_arg( 'key', $destination ) : $destination;
+	}
+
+	/**
+	 * Run the export query for a WHERE clause, spread the custom parameters
+	 * and strip the order key from order destinations.
 	 *
 	 * @since 1.1.0
 	 *
@@ -292,6 +319,10 @@ class EventsService {
 		// names are safe as keys: every events-table column name is reserved.
 		$custom_params = Tracker::custom_params();
 		foreach ( (array) $rows as $index => $row ) {
+			if ( isset( $row['destination'] ) ) {
+				$rows[ $index ]['destination'] = self::public_destination( $row );
+			}
+
 			$decoded = json_decode( (string) ( $row['custom'] ?? '' ), true );
 			unset( $rows[ $index ]['custom'] );
 			foreach ( $custom_params as $name ) {

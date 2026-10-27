@@ -49,6 +49,38 @@ return array(
 		utmatra_assert_same( null, EventsService::format_event( array( 'id' => 1 ) )['order_total'] );
 	},
 
+	'format event strips the order key from order destinations' => static function () {
+		$order = EventsService::format_event(
+			array(
+				'id'          => 1,
+				'link_id'     => 'order',
+				'destination' => 'https://example.test/checkout/order-received/5/?key=wc_order_abc&lang=en#top',
+			)
+		);
+		$legacy = EventsService::format_event(
+			array(
+				'id'            => 2,
+				'link_id'       => 'spring',
+				'is_conversion' => '1',
+				'destination'   => 'https://example.test/?page_id=7&order-received=5&key=wc_order_abc',
+			)
+		);
+		$keyless = 'https://example.test/checkout/order-received/5/?a=b%20c';
+
+		utmatra_assert_same( 'https://example.test/checkout/order-received/5/?lang=en#top', $order['destination'] );
+		utmatra_assert_same( 'https://example.test/?page_id=7&order-received=5', $legacy['destination'] );
+		utmatra_assert_same( $keyless, EventsService::format_event( array( 'id' => 3, 'link_id' => 'order', 'destination' => $keyless ) )['destination'] );
+	},
+
+	'format event keeps the key on non order rows'       => static function () {
+		$url = 'https://example.test/?key=abc&ref=x';
+
+		foreach ( array( 'incoming', 'visit', 'spring' ) as $link_id ) {
+			utmatra_assert_same( $url, EventsService::format_event( array( 'id' => 1, 'link_id' => $link_id, 'destination' => $url ) )['destination'] );
+		}
+		utmatra_assert_same( $url, EventsService::format_event( array( 'id' => 1, 'link_id' => 'lead', 'is_conversion' => '1', 'destination' => $url ) )['destination'] );
+	},
+
 	'get events clamps per page and page'                => static function () {
 		$GLOBALS['utmatra_test']['db_var'] = '401';
 		$result                            = EventsService::get_events(
@@ -103,6 +135,26 @@ return array(
 		utmatra_assert_false( array_key_exists( 'custom', $rows[0] ) );
 		utmatra_assert_true( false !== strpos( $GLOBALS['utmatra_test']['queries'][0], 'LIMIT 10000' ) );
 		utmatra_assert_true( false !== strpos( $GLOBALS['utmatra_test']['queries'][0], "AND link_id != 'visit'" ) );
+	},
+
+	'export strips the order key from order destinations only' => static function () {
+		$GLOBALS['utmatra_test']['db_rows'] = array(
+			array(
+				'link_id'       => 'order',
+				'is_conversion' => '1',
+				'destination'   => 'https://example.test/checkout/order-received/5/?key=wc_order_abc',
+			),
+			array(
+				'link_id'       => 'incoming',
+				'is_conversion' => '0',
+				'destination'   => 'https://example.test/?key=abc',
+			),
+		);
+
+		$rows = EventsService::export( array(), 10 );
+
+		utmatra_assert_same( 'https://example.test/checkout/order-received/5/', $rows[0]['destination'] );
+		utmatra_assert_same( 'https://example.test/?key=abc', $rows[1]['destination'] );
 	},
 
 	'export include visits keeps landing visits'         => static function () {
