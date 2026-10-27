@@ -32,15 +32,35 @@ defined( 'ABSPATH' ) || exit;
 class SettingsService {
 
 	/**
-	 * Lock name shared by every settings save. The settings span several
-	 * options, autoloaded by default, so OptionLock's alloptions cache drop
-	 * refreshes them.
+	 * Lock name shared by every settings save.
 	 *
 	 * @since 1.1.0
 	 *
 	 * @var string
 	 */
 	private const LOCK = 'utmatra_settings';
+
+	/**
+	 * Options a save reads and writes. Their cached copies are dropped once
+	 * the lock is held, so a site that stops autoloading one of them still
+	 * reads the value the previous save wrote.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var string[]
+	 */
+	private const OPTIONS = array(
+		'utmatra_retention_days',
+		WeeklyEmail::OPTION,
+		'utmatra_cookie_days',
+		ConversionWebhook::OPTION_URL,
+		ConversionWebhook::OPTION_PRESET,
+		ConversionWebhook::OPTION_EVENTS,
+		Attribution::OPTION_CONSENT_CATEGORY,
+		'utmatra_track_visits',
+		'utmatra_custom_params',
+		OptIn::OPTION,
+	);
 
 	/**
 	 * The current settings, safe to hand to an AI agent.
@@ -127,6 +147,10 @@ class SettingsService {
 		return OptionLock::run(
 			self::LOCK,
 			static function () use ( $params, $custom_names ): Result {
+				foreach ( self::OPTIONS as $option ) {
+					wp_cache_delete( $option, 'options' );
+				}
+
 				if ( null === $custom_names ) {
 					$custom_names = Tracker::custom_params();
 				}
@@ -168,6 +192,7 @@ class SettingsService {
 					update_option( OptIn::OPTION, $params['allow_agent_settings'] ? 1 : 0 );
 				}
 
+				// Still under the lock, so the job matches the toggle that was saved last.
 				if ( $weekly ) {
 					WeeklyEmail::schedule();
 				} else {

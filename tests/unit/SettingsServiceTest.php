@@ -41,6 +41,7 @@ return array(
 			get_option( 'utmatra_webhook_events' )
 		);
 		utmatra_assert_same( 2, count( utmatra_test_lock_queries() ) );
+		utmatra_assert_true( in_array( 'options:utmatra_cookie_days', $GLOBALS['utmatra_test']['cache_deleted'], true ) );
 	},
 
 	'a timed-out lock returns 503 and saves nothing'                                     => static function () {
