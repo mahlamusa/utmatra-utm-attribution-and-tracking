@@ -41,6 +41,7 @@ return array(
 		utmatra_assert_same( 200, $response->get_status() );
 		utmatra_assert_same( 1, $GLOBALS['utmatra_test']['options'][ OptIn::OPTION ] ?? null );
 		utmatra_assert_false( array_key_exists( 'allow_agent_settings', $response->get_data() ) );
+		utmatra_assert_same( 90, $GLOBALS['utmatra_test']['options']['utmatra_retention_days'] );
 	},
 
 	'the opt-in is ignored without a nonce'                  => static function () {
