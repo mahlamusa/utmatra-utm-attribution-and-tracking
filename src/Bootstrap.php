@@ -8,6 +8,7 @@
  *
  * @since 1.0.0
  * @since 1.1.0 Loads the capabilities, service support and abilities classes.
+ * @since 1.1.0 Loads the stats service and controller.
  *
  * @package Utmatra
  */
@@ -21,6 +22,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0
  * @since 1.1.0 Loads the capabilities, service support and abilities classes.
+ * @since 1.1.0 Loads the stats service and controller.
  */
 class Bootstrap {
 
@@ -32,6 +34,7 @@ class Bootstrap {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Loads the capabilities, service support and abilities classes.
+	 * @since 1.1.0 Loads the stats service and controller.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -72,6 +75,9 @@ class Bootstrap {
 		require_once $base . 'Services/Support/DateRange.php';
 		require_once $base . 'Services/SettingsService.php';
 		require_once $base . 'Rest/Controllers/SettingsController.php';
+		require_once $base . 'Services/StatsBreakdowns.php';
+		require_once $base . 'Services/StatsService.php';
+		require_once $base . 'Rest/Controllers/StatsController.php';
 		require_once $base . 'Abilities/AbilityDefinition.php';
 		require_once $base . 'Abilities/OptIn.php';
 		require_once $base . 'Abilities/SettingsSchema.php';
