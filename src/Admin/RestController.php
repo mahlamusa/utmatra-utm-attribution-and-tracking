@@ -39,7 +39,6 @@ namespace Utmatra\Admin;
 
 use DateTimeImmutable;
 use DateTimeZone;
-use stdClass;
 use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
 use Utmatra\Diagnostics\Checks;
@@ -52,7 +51,6 @@ use Utmatra\Services\EventsService;
 use Utmatra\Rest\Controllers\LinksController;
 use Utmatra\Rest\Controllers\PresetsController;
 use Utmatra\Services\Support\DateRange;
-use Utmatra\Tracking\Tracker;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
