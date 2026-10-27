@@ -36,6 +36,8 @@ function utmatra_test_reset(): void {
 		'logged_in'           => false,
 		'role_caps_refreshed' => 0,
 		'role_caps_seen'      => array(),
+		'lock_var'   => '1',
+		'cache_deleted' => array(),
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -765,6 +767,24 @@ class Utmatra_Test_Wpdb {
 	public $prefix = 'wp_';
 
 	/**
+	 * Database name.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var string
+	 */
+	public $dbname = 'wordpress';
+
+	/**
+	 * Options table.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var string
+	 */
+	public $options = 'wp_options';
+
+	/**
 	 * Substitute the placeholders.
 	 *
 	 * @since 1.1.0
@@ -803,6 +823,8 @@ class Utmatra_Test_Wpdb {
 	/**
 	 * Record the query and return the `db_var` test state (a zero count by default).
 	 *
+	 * A GET_LOCK query returns the `lock_var` test state instead (acquired by default).
+	 *
 	 * @since 1.1.0
 	 *
 	 * @param string $query SQL.
@@ -811,6 +833,9 @@ class Utmatra_Test_Wpdb {
 	 */
 	public function get_var( $query ) {
 		$GLOBALS['utmatra_test']['queries'][] = $query;
+		if ( 0 === strpos( $query, 'SELECT GET_LOCK(' ) ) {
+			return $GLOBALS['utmatra_test']['lock_var'];
+		}
 		return $GLOBALS['utmatra_test']['db_var'];
 	}
 
@@ -831,6 +856,21 @@ class Utmatra_Test_Wpdb {
 $GLOBALS['wpdb'] = new Utmatra_Test_Wpdb();
 
 define( 'ARRAY_A', 'ARRAY_A' );
+
+/**
+ * Stub of wp_cache_delete(); records the group and key.
+ *
+ * @since 1.1.0
+ *
+ * @param string $key   Cache key.
+ * @param string $group Cache group.
+ *
+ * @return bool
+ */
+function wp_cache_delete( $key, $group = '' ) {
+	$GLOBALS['utmatra_test']['cache_deleted'][] = $group . ':' . $key;
+	return true;
+}
 
 /**
  * Stub of wp_timezone(); the site runs on UTC.
@@ -865,6 +905,35 @@ function esc_sql( $value ) {
  */
 function home_url() {
 	return 'https://example.test';
+}
+
+/**
+ * Stub of esc_url_raw(); keeps a URL whose scheme is allowed, else returns ''.
+ *
+ * @since 1.1.0
+ *
+ * @param string   $url       URL.
+ * @param string[] $protocols Allowed schemes.
+ *
+ * @return string
+ */
+function esc_url_raw( $url, $protocols = array( 'http', 'https' ) ) {
+	return in_array( (string) wp_parse_url( $url, PHP_URL_SCHEME ), $protocols, true ) ? $url : '';
+}
+
+/**
+ * Stub of add_query_arg() for a single key and value.
+ *
+ * @since 1.1.0
+ *
+ * @param string $key   Query key.
+ * @param string $value Query value.
+ * @param string $url   URL.
+ *
+ * @return string
+ */
+function add_query_arg( $key, $value, $url ) {
+	return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . $key . '=' . $value;
 }
 
 /**
@@ -938,12 +1007,14 @@ function rest_sanitize_value_from_schema( $value, $args, $param = '' ) {
 $utmatra_src = dirname( __DIR__, 2 ) . '/src/';
 require_once $utmatra_src . 'Tracking/Attribution.php';
 require_once $utmatra_src . 'Tracking/Tracker.php';
+require_once $utmatra_src . 'Tracking/LinkManager.php';
 require_once $utmatra_src . 'Reports/ConversionWebhook.php';
 require_once $utmatra_src . 'Capabilities.php';
 require_once $utmatra_src . 'Services/Support/Result.php';
 require_once $utmatra_src . 'Services/Support/ResultAdapter.php';
 require_once $utmatra_src . 'Services/Support/DateRange.php';
 require_once $utmatra_src . 'Services/Support/InputValue.php';
+require_once $utmatra_src . 'Services/Support/OptionLock.php';
 require_once $utmatra_src . 'Services/Support/UtmNormalizer.php';
 require_once $utmatra_src . 'Services/LinkValidator.php';
 require_once $utmatra_src . 'Services/PresetsService.php';

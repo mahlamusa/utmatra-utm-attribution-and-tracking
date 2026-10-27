@@ -11,6 +11,7 @@ namespace Utmatra\Services;
 
 use stdClass;
 use Utmatra\DB\Schema;
+use Utmatra\Services\Support\OptionLock;
 use Utmatra\Services\Support\Result;
 use Utmatra\Tracking\LinkManager;
 use Utmatra\Tracking\Tracker;
@@ -80,37 +81,43 @@ class LinksService {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::create_link(); takes an input array and returns a Result.
+	 * @since 1.1.0 Runs under the links option lock, so parallel creates cannot lose a link or reuse a slug.
 	 *
 	 * @param array<string, mixed> $input Keys `id`, `label`, `destination`, the six UTM fields and `custom`.
 	 *
-	 * @return Result The formatted link (201), or a 400 or 409 error.
+	 * @return Result The formatted link (201), a 400 or 409 error, or a 503 error when the lock times out.
 	 */
 	public static function create( array $input ): Result {
-		$id = LinkValidator::slug( $input );
-		if ( $id instanceof Result ) {
-			return $id;
-		}
+		return OptionLock::run(
+			LinkManager::OPTION_KEY,
+			static function () use ( $input ): Result {
+				$id = LinkValidator::slug( $input );
+				if ( $id instanceof Result ) {
+					return $id;
+				}
 
-		$link = LinkValidator::fields( $input );
-		if ( $link instanceof Result ) {
-			return $link;
-		}
+				$link = LinkValidator::fields( $input );
+				if ( $link instanceof Result ) {
+					return $link;
+				}
 
-		if ( null !== LinkManager::get( $id ) ) {
-			return Result::error(
-				'utmatra_link_exists',
-				__( 'A link with this slug already exists.', 'utmatra-utm-attribution-and-tracking' ),
-				409
-			);
-		}
+				if ( null !== LinkManager::get( $id ) ) {
+					return Result::error(
+						'utmatra_link_exists',
+						__( 'A link with this slug already exists.', 'utmatra-utm-attribution-and-tracking' ),
+						409
+					);
+				}
 
-		if ( '' === $link['label'] ) {
-			$link['label'] = $id;
-		}
+				if ( '' === $link['label'] ) {
+					$link['label'] = $id;
+				}
 
-		LinkManager::save( $id, $link );
+				LinkManager::save( $id, $link );
 
-		return Result::ok( self::format( $id, $link, 0 ), 201 );
+				return Result::ok( self::format( $id, $link, 0 ), 201 );
+			}
+		);
 	}
 
 	/**
@@ -125,37 +132,48 @@ class LinksService {
 	 * @since 1.0.0
 	 * @since 1.0.0 Keeps stored values for custom parameters no longer configured.
 	 * @since 1.1.0 Moved from RestController::update_link(); takes the id and an input array and returns a Result.
+	 * @since 1.1.0 Saves under the links option lock; the click count is read after the lock is released.
 	 *
 	 * @param string               $id    Link slug.
 	 * @param array<string, mixed> $input Keys `label`, `destination`, the six UTM fields and `custom`.
 	 *
-	 * @return Result The formatted link (200), a 404 error for an unknown slug or a 400 error for an invalid destination.
+	 * @return Result The formatted link (200), a 404 error for an unknown slug, a 400 error for an invalid destination or a 503 error when the lock times out.
 	 */
 	public static function update( string $id, array $input ): Result {
 		global $wpdb;
 
-		$stored = LinkManager::get( $id );
-		if ( null === $stored ) {
-			return self::not_found();
-		}
+		$saved = OptionLock::run(
+			LinkManager::OPTION_KEY,
+			static function () use ( $id, $input ): Result {
+				$stored = LinkManager::get( $id );
+				if ( null === $stored ) {
+					return self::not_found();
+				}
 
-		$link = LinkValidator::fields( $input );
-		if ( $link instanceof Result ) {
-			return $link;
-		}
+				$link = LinkValidator::fields( $input );
+				if ( $link instanceof Result ) {
+					return $link;
+				}
 
-		if ( '' === $link['label'] ) {
-			$link['label'] = $id;
-		}
+				if ( '' === $link['label'] ) {
+					$link['label'] = $id;
+				}
 
-		// Values for parameters no longer configured are not in the form, so
-		// they are carried over: re-adding the parameter brings them back.
-		$kept = array_diff_key( is_array( $stored['custom'] ?? null ) ? $stored['custom'] : array(), array_flip( Tracker::custom_params() ) );
-		if ( array() !== $kept ) {
-			$link['custom'] = ( $link['custom'] ?? array() ) + $kept;
-		}
+				// Values for parameters no longer configured are not in the form, so
+				// they are carried over: re-adding the parameter brings them back.
+				$kept = array_diff_key( is_array( $stored['custom'] ?? null ) ? $stored['custom'] : array(), array_flip( Tracker::custom_params() ) );
+				if ( array() !== $kept ) {
+					$link['custom'] = ( $link['custom'] ?? array() ) + $kept;
+				}
 
-		LinkManager::save( $id, $link );
+				LinkManager::save( $id, $link );
+
+				return Result::ok( $link );
+			}
+		);
+		if ( $saved->is_error() ) {
+			return $saved;
+		}
 
 		$table = esc_sql( Schema::table() );
 		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
@@ -164,7 +182,7 @@ class LinksService {
 		);
 		// phpcs:enable
 
-		return Result::ok( self::format( $id, $link, $clicks ) );
+		return Result::ok( self::format( $id, $saved->data(), $clicks ) );
 	}
 
 	/**
@@ -175,19 +193,25 @@ class LinksService {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::delete_link(); takes the id and returns a Result.
+	 * @since 1.1.0 Runs under the links option lock.
 	 *
 	 * @param string $id Link slug.
 	 *
-	 * @return Result `{ deleted: true }`, or a 404 error for an unknown slug.
+	 * @return Result `{ deleted: true }`, a 404 error for an unknown slug, or a 503 error when the lock times out.
 	 */
 	public static function delete( string $id ): Result {
-		if ( null === LinkManager::get( $id ) ) {
-			return self::not_found();
-		}
+		return OptionLock::run(
+			LinkManager::OPTION_KEY,
+			static function () use ( $id ): Result {
+				if ( null === LinkManager::get( $id ) ) {
+					return self::not_found();
+				}
 
-		LinkManager::delete( $id );
+				LinkManager::delete( $id );
 
-		return Result::ok( array( 'deleted' => true ) );
+				return Result::ok( array( 'deleted' => true ) );
+			}
+		);
 	}
 
 	/**

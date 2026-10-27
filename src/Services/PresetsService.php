@@ -10,6 +10,7 @@
 namespace Utmatra\Services;
 
 use Utmatra\Services\Support\InputValue;
+use Utmatra\Services\Support\OptionLock;
 use Utmatra\Services\Support\Result;
 use Utmatra\Services\Support\UtmNormalizer;
 
@@ -84,10 +85,11 @@ class PresetsService {
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::create_preset(); takes an input array and returns a Result.
 	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a preset stored under an older id whose name maps to the same id.
+	 * @since 1.1.0 Runs under the presets option lock.
 	 *
 	 * @param array<string, mixed> $input Keys `name`, `utm_source`, `utm_medium`, `utm_term`, `utm_content`.
 	 *
-	 * @return Result The saved preset with its `id` (201), or a 400 error when the name is empty.
+	 * @return Result The saved preset with its `id` (201), a 400 error when the name is empty, or a 503 error when the lock times out.
 	 */
 	public static function create( array $input ): Result {
 		$name = sanitize_text_field( InputValue::string( $input, 'name' ) );
@@ -106,16 +108,21 @@ class PresetsService {
 			$preset[ $key ] = UtmNormalizer::normalize( sanitize_text_field( InputValue::string( $input, $key ) ) );
 		}
 
-		$presets = (array) get_option( self::OPTION, array() );
-		foreach ( $presets as $key => $stored ) {
-			if ( (string) $key !== $id && is_array( $stored ) && self::id_for( (string) ( $stored['name'] ?? '' ) ) === $id ) {
-				unset( $presets[ $key ] );
-			}
-		}
-		$presets[ $id ] = $preset;
-		update_option( self::OPTION, $presets );
+		return OptionLock::run(
+			self::OPTION,
+			static function () use ( $id, $preset ): Result {
+				$presets = (array) get_option( self::OPTION, array() );
+				foreach ( $presets as $key => $stored ) {
+					if ( (string) $key !== $id && is_array( $stored ) && self::id_for( (string) ( $stored['name'] ?? '' ) ) === $id ) {
+						unset( $presets[ $key ] );
+					}
+				}
+				$presets[ $id ] = $preset;
+				update_option( self::OPTION, $presets );
 
-		return Result::ok( array_merge( array( 'id' => $id ), $preset ), 201 );
+				return Result::ok( array_merge( array( 'id' => $id ), $preset ), 201 );
+			}
+		);
 	}
 
 	/**
@@ -139,25 +146,31 @@ class PresetsService {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::delete_preset(); takes the id and returns a Result.
+	 * @since 1.1.0 Runs under the presets option lock.
 	 *
 	 * @param string $id Preset id.
 	 *
-	 * @return Result `{ deleted: true }`, or a 404 error for an unknown id.
+	 * @return Result `{ deleted: true }`, a 404 error for an unknown id, or a 503 error when the lock times out.
 	 */
 	public static function delete( string $id ): Result {
-		$presets = (array) get_option( self::OPTION, array() );
+		return OptionLock::run(
+			self::OPTION,
+			static function () use ( $id ): Result {
+				$presets = (array) get_option( self::OPTION, array() );
 
-		if ( ! isset( $presets[ $id ] ) ) {
-			return Result::error(
-				'utmatra_preset_not_found',
-				__( 'Preset not found.', 'utmatra-utm-attribution-and-tracking' ),
-				404
-			);
-		}
+				if ( ! isset( $presets[ $id ] ) ) {
+					return Result::error(
+						'utmatra_preset_not_found',
+						__( 'Preset not found.', 'utmatra-utm-attribution-and-tracking' ),
+						404
+					);
+				}
 
-		unset( $presets[ $id ] );
-		update_option( self::OPTION, $presets );
+				unset( $presets[ $id ] );
+				update_option( self::OPTION, $presets );
 
-		return Result::ok( array( 'deleted' => true ) );
+				return Result::ok( array( 'deleted' => true ) );
+			}
+		);
 	}
 }

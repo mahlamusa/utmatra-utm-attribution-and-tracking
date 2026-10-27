@@ -89,6 +89,7 @@ class Bootstrap {
 		require_once $base . 'Services/Support/ResultAdapter.php';
 		require_once $base . 'Services/Support/DateRange.php';
 		require_once $base . 'Services/Support/InputValue.php';
+		require_once $base . 'Services/Support/OptionLock.php';
 		require_once $base . 'Services/Support/UtmNormalizer.php';
 		require_once $base . 'Services/LinkValidator.php';
 		require_once $base . 'Services/PresetsService.php';

@@ -21,7 +21,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 ### Changed
 
 - The dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
-- The REST handlers were refactored into a service layer shared with the abilities. REST routes, response bodies and status codes are unchanged apart from the order key removal listed under Security; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
+- The REST handlers were refactored into a service layer shared with the abilities. REST routes, response bodies and status codes are unchanged apart from the order key removal listed under Security and the 503 lock timeout error listed under Fixed; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
 - The AI agent settings opt-in error and the settings, test email and test webhook ability descriptions now name a user who can manage Utmatra settings instead of an administrator. The untrusted-data note on read abilities also lists the click ids and the custom and meta values.
 - The `list-events` ability accepts only the known channel slugs (the `label` values in `get-stats` `by_channel`) or an empty string for `channel`; an unknown value such as `Paid Search` is rejected as invalid input instead of returning no events. The REST route is unchanged.
 - The `list-journeys` ability returns 10 journeys per page by default instead of 50, since each journey can carry up to 100 touches; `per_page` still accepts up to 100. The REST route default stays 50.
@@ -31,6 +31,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. Their id is limited to lowercase letters, digits, dashes and underscores. A preset saved before 1.1.0 with such a name cannot be deleted from the dashboard; save it again under the same name and the new entry replaces the old one.
 - Ability input is coerced to its schema types before use, so `false` sent as a query string or a string (WordPress 6.9 and 7.0 run endpoints, direct `execute()` callers) stays false: `export-events` honours `include_visits: false`, `update-settings` no longer switches booleans on, and `send-test-webhook` honours `leads: false`. The input schema of `get-settings`, `send-test-email` and `get-diagnostics` now serialises as a JSON object.
 - An administrator who loads a page on the request that grants the new capabilities (the first request after upgrading, or the first load of a new multisite subsite) now has them on that request, instead of seeing no Utmatra menu or a 403 from the dashboard REST routes and abilities until the next page load.
+- Parallel link and preset changes (for example several AI agent calls at once) no longer lose updates: creating, updating and deleting links and presets now runs one at a time under a database lock, and two creates of the same slug return one 201 and one 409. A change that cannot get the lock within 3 seconds returns a 503 error (code `utmatra_busy` for abilities).
 
 ### Security
 
