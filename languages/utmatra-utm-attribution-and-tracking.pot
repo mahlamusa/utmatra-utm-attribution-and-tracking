@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T11:42:13+00:00\n"
+"POT-Creation-Date: 2026-10-27T12:48:11+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utmatra-utm-attribution-and-tracking\n"
@@ -788,6 +788,10 @@ msgstr ""
 msgid "No UTM parameter or click ID present."
 msgstr ""
 
+#: src/Rest/Controllers/SettingsController.php:101
+msgid "custom_params must be a comma separated string or a list of parameter names."
+msgstr ""
+
 #: src/Services/JourneysService.php:124
 msgid "No events recorded for this visitor."
 msgstr ""
@@ -800,11 +804,11 @@ msgstr ""
 msgid "Link not found."
 msgstr ""
 
-#: src/Services/LinkValidator.php:97
+#: src/Services/LinkValidator.php:100
 msgid "Please provide a valid link slug (incoming, visit, order and lead are reserved)."
 msgstr ""
 
-#: src/Services/LinkValidator.php:132
+#: src/Services/LinkValidator.php:135
 msgid "Please provide a valid destination URL (http or https)."
 msgstr ""
 
@@ -817,21 +821,21 @@ msgid "Preset not found."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Services/SettingsService.php:207
+#: src/Services/SettingsService.php:257
 msgid "%s is reserved and cannot be used as a custom parameter."
 msgstr ""
 
 #. translators: %s: the rejected custom parameter name.
-#: src/Services/SettingsService.php:212
+#: src/Services/SettingsService.php:262
 msgid "Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s"
 msgstr ""
 
 #. translators: %d: maximum number of custom parameters.
-#: src/Services/SettingsService.php:223
+#: src/Services/SettingsService.php:273
 msgid "You can define up to %d custom parameters."
 msgstr ""
 
-#: src/Services/Support/OptionLock.php:69
+#: src/Services/Support/OptionLock.php:70
 msgid "Another change is being saved. Please try again."
 msgstr ""
 

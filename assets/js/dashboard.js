@@ -2019,7 +2019,9 @@
 			input.type = 'text';
 			input.id   = 'utmatra-custom-' + name;
 			input.setAttribute( 'data-utmatra-custom', name );
-			if ( filled[ name ] ) {
+			// Own keys only: a parameter named e.g. constructor must not
+			// pick up an inherited Object.prototype member.
+			if ( Object.prototype.hasOwnProperty.call( filled, name ) && filled[ name ] ) {
 				input.value = filled[ name ];
 			}
 
