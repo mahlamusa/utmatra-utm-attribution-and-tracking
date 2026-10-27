@@ -33,6 +33,9 @@ function utmatra_test_reset(): void {
 		'queries'    => array(),
 		'db_rows'    => array(),
 		'db_var'     => '0',
+		'logged_in'           => false,
+		'role_caps_refreshed' => 0,
+		'role_caps_seen'      => array(),
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -549,6 +552,50 @@ function do_action( $hook, ...$args ) {
  */
 function get_current_user_id() {
 	return 7;
+}
+
+/**
+ * Stub of is_user_logged_in(); reads the test state.
+ *
+ * @since 1.1.0
+ *
+ * @return bool
+ */
+function is_user_logged_in() {
+	return $GLOBALS['utmatra_test']['logged_in'];
+}
+
+/**
+ * Stub of wp_get_current_user(); counts get_role_caps() calls.
+ *
+ * @since 1.1.0
+ *
+ * @return Utmatra_Test_User
+ */
+function wp_get_current_user() {
+	return new Utmatra_Test_User();
+}
+
+/**
+ * Minimal WP_User that records capability refreshes in the test state.
+ *
+ * @since 1.1.0
+ */
+class Utmatra_Test_User {
+
+	/**
+	 * Stub of WP_User::get_role_caps(); records the administrator caps it
+	 * would read, so tests can tell a refresh ran after the grant.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array
+	 */
+	public function get_role_caps() {
+		++$GLOBALS['utmatra_test']['role_caps_refreshed'];
+		$GLOBALS['utmatra_test']['role_caps_seen'] = $GLOBALS['utmatra_test']['roles']['administrator'] ?? array();
+		return $GLOBALS['utmatra_test']['role_caps_seen'];
+	}
 }
 
 /**

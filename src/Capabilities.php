@@ -77,7 +77,10 @@ class Capabilities {
 	 * Grant the three tiers to the administrator role and record the version.
 	 *
 	 * Runs on activation and, through maybe_upgrade(), once per site on
-	 * upgrade, so existing administrators keep full access.
+	 * upgrade, so existing administrators keep full access. Core builds the
+	 * current user's capabilities before `init`, so they are rebuilt here
+	 * too; otherwise a logged-in administrator would lack the new tiers for
+	 * the rest of the request that grants them.
 	 *
 	 * @since 1.1.0
 	 *
@@ -92,6 +95,10 @@ class Capabilities {
 
 		foreach ( self::all() as $cap ) {
 			$role->add_cap( $cap );
+		}
+
+		if ( is_user_logged_in() ) {
+			wp_get_current_user()->get_role_caps();
 		}
 
 		update_option( self::VERSION_OPTION, self::VERSION );
