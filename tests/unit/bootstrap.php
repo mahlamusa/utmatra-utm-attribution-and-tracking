@@ -703,6 +703,8 @@ require_once $utmatra_src . 'Services/NotificationsService.php';
 require_once $utmatra_src . 'Rest/Controllers/NotificationsController.php';
 require_once $utmatra_src . 'Services/DiagnosticsService.php';
 require_once $utmatra_src . 'Rest/Controllers/DiagnosticsController.php';
+require_once $utmatra_src . 'Services/JourneysService.php';
+require_once $utmatra_src . 'Rest/Controllers/JourneysController.php';
 require_once $utmatra_src . 'Abilities/AbilityDefinition.php';
 require_once $utmatra_src . 'Abilities/EventSchema.php';
 require_once $utmatra_src . 'Abilities/OptIn.php';
