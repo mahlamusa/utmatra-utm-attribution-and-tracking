@@ -1,6 +1,6 @@
 # REST snapshot harness
 
-Records the response (status and body) of every `utmatra/v1` route, including the 400, 404 and 409 error cases and a 401/403 check of every route and method, so a refactor can prove the REST output did not change. It is developer tooling: `tests/` is export-ignored and never ships.
+Records the response (status and body) of every `utmatra/v1` route, including the 400, 404 and 409 error cases, a 401/403 check of every route and method, and every route and method as a viewer holding only `utmatra_view_reports` (200 on reads, 403 on writes), so a refactor can prove the REST output did not change. It is developer tooling: `tests/` is export-ignored and never ships.
 
 ## Requirements
 
@@ -38,7 +38,7 @@ git worktree remove /tmp/utmatra-main
 
 ## Determinism
 
-- The seed is fixed: three links, two presets, the settings options, a subscriber user and 16 events (click, visit, order and lead rows over five visitors plus visitor-less rows) at fixed site-local times on days counted back from today. The site timezone is Africa/Johannesburg (no DST). The events table is truncated first, so event ids always start at 1.
+- The seed is fixed: three links, two presets, the settings options, a subscriber user, a `snapshot_viewer` user whose role holds only `utmatra_view_reports`, and 16 events (click, visit, order and lead rows over five visitors plus visitor-less rows) at fixed site-local times on days counted back from today. The site timezone is Africa/Johannesburg (no DST). The events table is truncated first, so event ids always start at 1.
 - The site URL is masked as `{home}` and every `Y-m-d` date, including inside datetimes and keys, as `D-<n>` (days before today, site-local).
 - Rows of the ranked stats breakdowns (`ORDER BY count DESC`, or revenue) that tie have no defined order in MySQL, so ties are ordered by label. Only tied rows move, so a change in the ranking still shows.
 - No seeded event falls on the day the 7- or 30-day previous-period window ends, since that cut-off depends on the time of day.

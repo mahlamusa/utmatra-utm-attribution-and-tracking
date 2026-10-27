@@ -318,7 +318,7 @@ if ( ! function_exists( 'sanitize_key' ) ) {
 
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	/**
-	 * Minimal WP_REST_Request: parameters only.
+	 * Minimal WP_REST_Request: parameters and headers.
 	 *
 	 * @since 1.1.0
 	 */
@@ -330,6 +330,66 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		 * @var array<string, mixed>
 		 */
 		private $params = array();
+
+		/**
+		 * Headers, keyed by canonical name (see canonicalize_header_name()).
+		 *
+		 * @var array<string, string>
+		 */
+		private $headers = array();
+
+		/**
+		 * Whether a parameter is set, even to null.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param string $key Parameter name.
+		 *
+		 * @return bool
+		 */
+		public function has_param( $key ) {
+			return array_key_exists( $key, $this->params );
+		}
+
+		/**
+		 * Set a header.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param string $key   Header name.
+		 * @param string $value Header value.
+		 *
+		 * @return void
+		 */
+		public function set_header( $key, $value ) {
+			$this->headers[ self::canonicalize_header_name( $key ) ] = $value;
+		}
+
+		/**
+		 * Get a header; null when absent.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param string $key Header name.
+		 *
+		 * @return string|null
+		 */
+		public function get_header( $key ) {
+			return $this->headers[ self::canonicalize_header_name( $key ) ] ?? null;
+		}
+
+		/**
+		 * Canonical header name, as WordPress stores it: lowercase, dashes as underscores.
+		 *
+		 * @since 1.1.0
+		 *
+		 * @param string $key Header name.
+		 *
+		 * @return string
+		 */
+		public static function canonicalize_header_name( $key ) {
+			return str_replace( '-', '_', strtolower( $key ) );
+		}
 
 		/**
 		 * Set a parameter.
@@ -385,6 +445,20 @@ function wp_parse_url( $url, $component = -1 ) {
  */
 function sanitize_text_field( $value ) {
 	return trim( strip_tags( (string) $value ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+}
+
+/**
+ * Stub of wp_verify_nonce(); only `valid-nonce` for the `wp_rest` action verifies.
+ *
+ * @since 1.1.0
+ *
+ * @param string $nonce  Nonce.
+ * @param string $action Action the nonce was created for.
+ *
+ * @return int|false 1 when valid, false otherwise.
+ */
+function wp_verify_nonce( $nonce, $action = -1 ) {
+	return 'valid-nonce' === $nonce && 'wp_rest' === $action ? 1 : false;
 }
 
 /**

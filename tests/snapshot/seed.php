@@ -16,6 +16,7 @@
  * @package Utmatra\Tests
  */
 
+use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
 
 defined( 'ABSPATH' ) || exit;
@@ -36,6 +37,20 @@ if ( ! get_user_by( 'login', 'snapshot_subscriber' ) ) {
 			'user_pass'  => wp_generate_password(),
 			'user_email' => 'subscriber@example.test',
 			'role'       => 'subscriber',
+		)
+	);
+}
+
+// A role holding only the view tier, recreated so its capabilities are exact.
+remove_role( 'snapshot_viewer' );
+add_role( 'snapshot_viewer', 'Snapshot Viewer', array( Capabilities::VIEW_REPORTS => true ) );
+if ( ! get_user_by( 'login', 'snapshot_viewer' ) ) {
+	wp_insert_user(
+		array(
+			'user_login' => 'snapshot_viewer',
+			'user_pass'  => wp_generate_password(),
+			'user_email' => 'viewer@example.test',
+			'role'       => 'snapshot_viewer',
 		)
 	);
 }
@@ -138,15 +153,15 @@ $utmatra_snapshot_events = array(
 	array( 40, '10:00', array( 'link_id' => 'spring-newsletter', 'visitor_id' => $utmatra_snapshot_v4, 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'mobile', 'destination' => 'https://example.test/spring/' ) ),
 	array( 20, '08:00', array( 'link_id' => 'partner-blog', 'visitor_id' => $utmatra_snapshot_v3, 'utm_source' => 'partner', 'utm_medium' => 'referral', 'utm_campaign' => 'spring-sale', 'utm_term' => 'review', 'channel' => 'referral', 'device' => 'desktop', 'referrer' => 'https://partner.example.org/review/', 'destination' => 'https://example.test/?ref=partner' ) ),
 	array( 12, '10:00', array( 'link_id' => 'spring-newsletter', 'visitor_id' => $utmatra_snapshot_v1, 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'utm_id' => 'nl-01', 'utm_content' => 'header-button', 'channel' => 'email', 'device' => 'desktop', 'destination' => 'https://example.test/spring/', 'custom' => '{"coupon":"SPRING10"}' ) ),
-	array( 12, '10:05', array( 'link_id' => 'visit', 'visitor_id' => $utmatra_snapshot_v1, 'channel' => 'organic-search', 'device' => 'desktop', 'referrer' => 'https://www.google.com/', 'destination' => 'https://example.test/shop/' ) ),
+	array( 12, '10:05', array( 'link_id' => 'visit', 'visitor_id' => $utmatra_snapshot_v1, 'channel' => 'organic_search', 'device' => 'desktop', 'referrer' => 'https://www.google.com/', 'destination' => 'https://example.test/shop/' ) ),
 	array( 12, '11:00', array( 'link_id' => 'order', 'visitor_id' => $utmatra_snapshot_v1, 'is_conversion' => 1, 'touch' => 'last', 'order_total' => '129.5000', 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'meta' => '{"order_id":101,"currency":"ZAR"}' ) ),
-	array( 9, '12:00', array( 'link_id' => 'summer-social', 'visitor_id' => $utmatra_snapshot_v5, 'utm_source' => 'facebook', 'utm_medium' => 'paid-social', 'utm_campaign' => 'summer-launch', 'channel' => 'paid-social', 'device' => 'mobile', 'fbclid' => 'fb.snap.5', 'destination' => 'https://example.test/summer/' ) ),
-	array( 6, '15:30', array( 'link_id' => 'incoming', 'visitor_id' => $utmatra_snapshot_v5, 'utm_source' => 'chatgpt.com', 'channel' => 'ai-assistant', 'device' => 'desktop', 'referrer' => 'https://chatgpt.com/', 'destination' => 'https://example.test/guide/' ) ),
-	array( 5, '14:00', array( 'link_id' => 'visit', 'visitor_id' => $utmatra_snapshot_v3, 'channel' => 'organic-social', 'device' => 'tablet', 'referrer' => 'https://t.co/', 'destination' => 'https://example.test/' ) ),
+	array( 9, '12:00', array( 'link_id' => 'summer-social', 'visitor_id' => $utmatra_snapshot_v5, 'utm_source' => 'facebook', 'utm_medium' => 'paid-social', 'utm_campaign' => 'summer-launch', 'channel' => 'paid_social', 'device' => 'mobile', 'fbclid' => 'fb.snap.5', 'destination' => 'https://example.test/summer/' ) ),
+	array( 6, '15:30', array( 'link_id' => 'incoming', 'visitor_id' => $utmatra_snapshot_v5, 'utm_source' => 'chatgpt.com', 'channel' => 'ai_assistant', 'device' => 'desktop', 'referrer' => 'https://chatgpt.com/', 'destination' => 'https://example.test/guide/' ) ),
+	array( 5, '14:00', array( 'link_id' => 'visit', 'visitor_id' => $utmatra_snapshot_v3, 'channel' => 'organic_social', 'device' => 'tablet', 'referrer' => 'https://t.co/', 'destination' => 'https://example.test/' ) ),
 	array( 4, '13:00', array( 'link_id' => 'order', 'visitor_id' => '', 'is_conversion' => 1, 'touch' => 'last', 'order_total' => '19.9900', 'channel' => 'direct', 'device' => 'desktop', 'meta' => '{"order_id":102,"currency":"ZAR"}' ) ),
-	array( 3, '09:00', array( 'link_id' => 'summer-social', 'visitor_id' => $utmatra_snapshot_v2, 'utm_source' => 'facebook', 'utm_medium' => 'paid-social', 'utm_campaign' => 'summer-launch', 'channel' => 'paid-social', 'device' => 'mobile', 'fbclid' => 'fb.snap.2', 'destination' => 'https://example.test/summer/', 'custom' => '{"coupon":"SUMMER"}' ) ),
-	array( 2, '09:30', array( 'link_id' => 'incoming', 'visitor_id' => $utmatra_snapshot_v2, 'utm_source' => 'google', 'utm_medium' => 'cpc', 'utm_campaign' => 'summer-launch', 'utm_term' => 'utm tracking', 'gclid' => 'gcl.snap.2', 'channel' => 'paid-search', 'device' => 'mobile', 'destination' => 'https://example.test/summer/' ) ),
-	array( 2, '09:45', array( 'link_id' => 'lead', 'visitor_id' => $utmatra_snapshot_v2, 'is_conversion' => 1, 'touch' => 'last', 'utm_source' => 'google', 'utm_medium' => 'cpc', 'utm_campaign' => 'summer-launch', 'channel' => 'paid-search', 'device' => 'mobile', 'meta' => '{"form":"Contact","plugin":"cf7"}' ) ),
+	array( 3, '09:00', array( 'link_id' => 'summer-social', 'visitor_id' => $utmatra_snapshot_v2, 'utm_source' => 'facebook', 'utm_medium' => 'paid-social', 'utm_campaign' => 'summer-launch', 'channel' => 'paid_social', 'device' => 'mobile', 'fbclid' => 'fb.snap.2', 'destination' => 'https://example.test/summer/', 'custom' => '{"coupon":"SUMMER"}' ) ),
+	array( 2, '09:30', array( 'link_id' => 'incoming', 'visitor_id' => $utmatra_snapshot_v2, 'utm_source' => 'google', 'utm_medium' => 'cpc', 'utm_campaign' => 'summer-launch', 'utm_term' => 'utm tracking', 'gclid' => 'gcl.snap.2', 'channel' => 'paid_search', 'device' => 'mobile', 'destination' => 'https://example.test/summer/' ) ),
+	array( 2, '09:45', array( 'link_id' => 'lead', 'visitor_id' => $utmatra_snapshot_v2, 'is_conversion' => 1, 'touch' => 'last', 'utm_source' => 'google', 'utm_medium' => 'cpc', 'utm_campaign' => 'summer-launch', 'channel' => 'paid_search', 'device' => 'mobile', 'meta' => '{"form":"Contact","plugin":"cf7"}' ) ),
 	array( 2, '18:00', array( 'link_id' => 'visit', 'visitor_id' => '', 'channel' => 'direct', 'device' => 'desktop', 'destination' => 'https://example.test/about/' ) ),
 	array( 1, '10:00', array( 'link_id' => 'spring-newsletter', 'visitor_id' => $utmatra_snapshot_v1, 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'destination' => 'https://example.test/spring/' ) ),
 	array( 1, '16:00', array( 'link_id' => 'order', 'visitor_id' => $utmatra_snapshot_v3, 'is_conversion' => 1, 'touch' => 'last', 'order_total' => '59.0000', 'utm_source' => 'partner', 'utm_medium' => 'referral', 'utm_campaign' => 'spring-sale', 'channel' => 'referral', 'device' => 'tablet', 'meta' => '{"order_id":103,"currency":"ZAR"}' ) ),
