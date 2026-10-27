@@ -216,10 +216,11 @@ class EventsService {
 	 * The two JSON columns are always objects: decoded without `assoc` and
 	 * replaced with an empty stdClass when NULL, empty or undecodable, so the
 	 * response encodes `{}` and never `[]`. `ip_hash` and `user_agent` are
-	 * never selected (see EVENT_COLUMNS). Order rows lose the WooCommerce
-	 * order key from their destination (see public_destination()).
+	 * never selected (see EVENT_COLUMNS). The WooCommerce order key is
+	 * removed from the destination and referrer (see public_destination()
+	 * and without_order_key()).
 	 *
-	 * @since 1.1.0 Moved from RestController::format_event(); strips the order key from order destinations.
+	 * @since 1.1.0 Moved from RestController::format_event(); strips the WooCommerce order key from the destination and referrer.
 	 *
 	 * @param array<string, mixed> $row Event row (ARRAY_A).
 	 *
@@ -247,7 +248,7 @@ class EventsService {
 			'li_fat_id'     => (string) ( $row['li_fat_id'] ?? '' ),
 			'twclid'        => (string) ( $row['twclid'] ?? '' ),
 			'destination'   => self::public_destination( $row ),
-			'referrer'      => (string) ( $row['referrer'] ?? '' ),
+			'referrer'      => self::without_order_key( (string) ( $row['referrer'] ?? '' ) ),
 			'is_conversion' => (bool) (int) ( $row['is_conversion'] ?? 0 ),
 			'touch'         => (string) ( $row['touch'] ?? '' ),
 			'order_total'   => ( isset( $row['order_total'] ) && null !== $row['order_total'] && '' !== $row['order_total'] ) ? (float) $row['order_total'] : null,
@@ -264,9 +265,9 @@ class EventsService {
 	 *
 	 * WooCommerce stores order rows with the order-received URL, whose `key`
 	 * argument is the WooCommerce order key: for a guest order it opens the
-	 * order's thank-you page and pay link. Order rows lose that argument;
-	 * every other row, and an order destination without a key, is returned
-	 * exactly as stored (remove_query_arg() re-encodes the query string).
+	 * order's thank-you page and pay link. Order rows lose any `key`
+	 * argument; every other row loses it only when it holds a WooCommerce
+	 * order key (see without_order_key()).
 	 *
 	 * @since 1.1.0
 	 *
@@ -275,18 +276,41 @@ class EventsService {
 	 * @return string
 	 */
 	private static function public_destination( array $row ): string {
-		$destination = (string) ( $row['destination'] ?? '' );
-		if ( 'order' !== self::event_kind( $row ) ) {
-			return $destination;
+		return self::without_order_key( (string) ( $row['destination'] ?? '' ), 'order' === self::event_kind( $row ) );
+	}
+
+	/**
+	 * A URL without its WooCommerce order key.
+	 *
+	 * Visit, incoming and lead rows store the landing or form page and every
+	 * row stores the referring page, so an order-received or order-pay link
+	 * carries its order key into them. The `key` argument is removed when
+	 * its value starts with `wc_order_`, or whatever it holds when
+	 * `$any_key` is set; any other URL is returned exactly as stored
+	 * (remove_query_arg() re-encodes the query string).
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $url     Stored URL.
+	 * @param bool   $any_key Whether to remove a `key` argument whatever its value.
+	 *
+	 * @return string
+	 */
+	private static function without_order_key( string $url, bool $any_key = false ): string {
+		wp_parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
+		if ( ! isset( $query['key'] ) ) {
+			return $url;
+		}
+		if ( ! $any_key && ( ! is_string( $query['key'] ) || 0 !== strpos( $query['key'], 'wc_order_' ) ) ) {
+			return $url;
 		}
 
-		wp_parse_str( (string) wp_parse_url( $destination, PHP_URL_QUERY ), $query );
-		return isset( $query['key'] ) ? remove_query_arg( 'key', $destination ) : $destination;
+		return remove_query_arg( 'key', $url );
 	}
 
 	/**
 	 * Run the export query for a WHERE clause, spread the custom parameters
-	 * and strip the order key from order destinations.
+	 * and strip the WooCommerce order key from destinations and referrers.
 	 *
 	 * @since 1.1.0
 	 *
@@ -321,6 +345,9 @@ class EventsService {
 		foreach ( (array) $rows as $index => $row ) {
 			if ( isset( $row['destination'] ) ) {
 				$rows[ $index ]['destination'] = self::public_destination( $row );
+			}
+			if ( isset( $row['referrer'] ) ) {
+				$rows[ $index ]['referrer'] = self::without_order_key( (string) $row['referrer'] );
 			}
 
 			$decoded = json_decode( (string) ( $row['custom'] ?? '' ), true );

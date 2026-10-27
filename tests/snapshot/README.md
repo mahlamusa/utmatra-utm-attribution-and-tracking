@@ -38,7 +38,7 @@ git worktree remove /tmp/utmatra-main
 
 ## Determinism
 
-- The seed is fixed: three links, two presets, the settings options, a subscriber user, a `snapshot_viewer` user whose role holds only `utmatra_view_reports`, and 16 events (click, visit, order and lead rows over five visitors plus visitor-less rows) at fixed site-local times on days counted back from today. The site timezone is Africa/Johannesburg (no DST). The events table is truncated first, so event ids always start at 1.
+- The seed is fixed: three links, two presets, the settings options, a subscriber user, a `snapshot_viewer` user whose role holds only `utmatra_view_reports`, and 20 events (click, visit, order and lead rows over six visitors plus visitor-less rows; the sixth visitor's four rows, 800 days back, carry WooCommerce order keys and are returned only by the `*-order-keys` calls, though they still count toward `all_time_total`) at fixed site-local times on days counted back from today. The site timezone is Africa/Johannesburg (no DST). The events table is truncated first, so event ids always start at 1.
 - The site URL is masked as `{home}` and every `Y-m-d` date, including inside datetimes and keys, as `D-<n>` (days before today, site-local).
 - Rows of the ranked stats breakdowns (`ORDER BY count DESC`, or revenue) that tie have no defined order in MySQL, so ties are ordered by label. Only tied rows move, so a change in the ranking still shows.
 - No seeded event falls on the day the 7- or 30-day previous-period window ends, since that cut-off depends on the time of day.

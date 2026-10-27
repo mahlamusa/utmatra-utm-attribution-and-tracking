@@ -146,6 +146,8 @@ $utmatra_snapshot_v2 = '2c5f39cb-3ab2-42e3-994a-1127e4ddb538';
 $utmatra_snapshot_v3 = '3d6a4adc-4bc3-43f4-a55b-2238f5eec649';
 $utmatra_snapshot_v4 = '4e7b5bed-5cd4-44a5-b66c-3349a6ffd75a';
 $utmatra_snapshot_v5 = '5f8c6cfe-6de5-45b6-877d-445ab7aae86b';
+$utmatra_snapshot_v6 = '6a9d7d0f-7ef6-46c7-988e-556bc8bf97c0';
+$utmatra_snapshot_key = 'https://example.test/checkout/order-received/104/?key=wc_order_snap104';
 
 // Days ago, site-local time, then the row fields.
 $utmatra_snapshot_events = array(
@@ -165,6 +167,12 @@ $utmatra_snapshot_events = array(
 	array( 2, '18:00', array( 'link_id' => 'visit', 'visitor_id' => '', 'channel' => 'direct', 'device' => 'desktop', 'destination' => 'https://example.test/about/' ) ),
 	array( 1, '10:00', array( 'link_id' => 'spring-newsletter', 'visitor_id' => $utmatra_snapshot_v1, 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'destination' => 'https://example.test/spring/' ) ),
 	array( 1, '16:00', array( 'link_id' => 'order', 'visitor_id' => $utmatra_snapshot_v3, 'is_conversion' => 1, 'touch' => 'last', 'order_total' => '59.0000', 'utm_source' => 'partner', 'utm_medium' => 'referral', 'utm_campaign' => 'spring-sale', 'channel' => 'referral', 'device' => 'tablet', 'meta' => '{"order_id":103,"currency":"ZAR"}' ) ),
+	// WooCommerce order keys in destinations and referrers, older than every
+	// other call's window so only the order-key calls return them.
+	array( 800, '10:00', array( 'link_id' => 'visit', 'visitor_id' => $utmatra_snapshot_v6, 'channel' => 'organic_search', 'device' => 'desktop', 'referrer' => 'https://www.google.com/', 'destination' => $utmatra_snapshot_key . '&lang=en' ) ),
+	array( 800, '10:05', array( 'link_id' => 'incoming', 'visitor_id' => $utmatra_snapshot_v6, 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'referrer' => $utmatra_snapshot_key, 'destination' => 'https://example.test/spring/?key=foo' ) ),
+	array( 800, '10:10', array( 'link_id' => 'lead', 'visitor_id' => $utmatra_snapshot_v6, 'is_conversion' => 1, 'touch' => 'last', 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'destination' => 'https://example.test/checkout/order-pay/104/?pay_for_order=true&key=wc_order_snap104', 'meta' => '{"form":"Feedback","plugin":"cf7"}' ) ),
+	array( 800, '10:15', array( 'link_id' => 'order', 'visitor_id' => $utmatra_snapshot_v6, 'is_conversion' => 1, 'touch' => 'last', 'order_total' => '42.0000', 'utm_source' => 'newsletter', 'utm_medium' => 'email', 'utm_campaign' => 'spring-sale', 'channel' => 'email', 'device' => 'desktop', 'destination' => $utmatra_snapshot_key, 'meta' => '{"order_id":104,"currency":"ZAR"}' ) ),
 );
 
 $utmatra_snapshot_today = new DateTimeImmutable( 'today', wp_timezone() );

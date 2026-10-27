@@ -81,6 +81,34 @@ return array(
 		utmatra_assert_same( $url, EventsService::format_event( array( 'id' => 1, 'link_id' => 'lead', 'is_conversion' => '1', 'destination' => $url ) )['destination'] );
 	},
 
+	'format event strips a woocommerce order key from every row' => static function () {
+		$order_url = 'https://example.test/checkout/order-received/5/?key=wc_order_abc&lang=en';
+		$stripped  = 'https://example.test/checkout/order-received/5/?lang=en';
+		$rows      = array(
+			array( 'link_id' => 'visit' ),
+			array( 'link_id' => 'incoming' ),
+			array( 'link_id' => 'spring' ),
+			array(
+				'link_id'       => 'lead',
+				'is_conversion' => '1',
+			),
+		);
+
+		foreach ( $rows as $row ) {
+			$event = EventsService::format_event( $row + array( 'id' => 1, 'destination' => $order_url, 'referrer' => $order_url ) );
+			utmatra_assert_same( $stripped, $event['destination'] );
+			utmatra_assert_same( $stripped, $event['referrer'] );
+		}
+	},
+
+	'format event keeps a non woocommerce key in the referrer' => static function () {
+		$url = 'https://example.test/?key=foo&ref=x';
+
+		foreach ( array( 'spring', 'visit', 'order' ) as $link_id ) {
+			utmatra_assert_same( $url, EventsService::format_event( array( 'id' => 1, 'link_id' => $link_id, 'referrer' => $url ) )['referrer'] );
+		}
+	},
+
 	'get events clamps per page and page'                => static function () {
 		$GLOBALS['utmatra_test']['db_var'] = '401';
 		$result                            = EventsService::get_events(
@@ -137,7 +165,7 @@ return array(
 		utmatra_assert_true( false !== strpos( $GLOBALS['utmatra_test']['queries'][0], "AND link_id != 'visit'" ) );
 	},
 
-	'export strips the order key from order destinations only' => static function () {
+	'export keeps a non woocommerce key on non order rows' => static function () {
 		$GLOBALS['utmatra_test']['db_rows'] = array(
 			array(
 				'link_id'       => 'order',
@@ -155,6 +183,30 @@ return array(
 
 		utmatra_assert_same( 'https://example.test/checkout/order-received/5/', $rows[0]['destination'] );
 		utmatra_assert_same( 'https://example.test/?key=abc', $rows[1]['destination'] );
+	},
+
+	'export strips a woocommerce order key from destinations and referrers' => static function () {
+		$GLOBALS['utmatra_test']['db_rows'] = array(
+			array(
+				'link_id'       => 'visit',
+				'is_conversion' => '0',
+				'destination'   => 'https://example.test/checkout/order-pay/5/?pay_for_order=true&key=wc_order_abc',
+				'referrer'      => 'https://example.test/?key=foo',
+			),
+			array(
+				'link_id'       => 'spring',
+				'is_conversion' => '0',
+				'destination'   => 'https://example.test/spring/?key=foo',
+				'referrer'      => 'https://example.test/checkout/order-received/5/?key=wc_order_abc',
+			),
+		);
+
+		$rows = EventsService::export( array( 'include_visits' => true ), 10 );
+
+		utmatra_assert_same( 'https://example.test/checkout/order-pay/5/?pay_for_order=true', $rows[0]['destination'] );
+		utmatra_assert_same( 'https://example.test/?key=foo', $rows[0]['referrer'] );
+		utmatra_assert_same( 'https://example.test/spring/?key=foo', $rows[1]['destination'] );
+		utmatra_assert_same( 'https://example.test/checkout/order-received/5/', $rows[1]['referrer'] );
 	},
 
 	'export include visits keeps landing visits'         => static function () {
