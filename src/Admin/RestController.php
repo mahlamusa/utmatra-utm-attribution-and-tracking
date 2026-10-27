@@ -30,6 +30,7 @@
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
+ * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
  *
  * @package Utmatra\Admin
  */
@@ -48,8 +49,9 @@ use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Rest\Controllers\EventsController;
 use Utmatra\Rest\Controllers\StatsController;
 use Utmatra\Services\EventsService;
+use Utmatra\Rest\Controllers\LinksController;
+use Utmatra\Rest\Controllers\PresetsController;
 use Utmatra\Services\Support\DateRange;
-use Utmatra\Tracking\LinkManager;
 use Utmatra\Tracking\Tracker;
 use WP_Error;
 use WP_REST_Request;
@@ -66,6 +68,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
+ * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
  */
 class RestController {
 
@@ -87,6 +90,7 @@ class RestController {
 	 * @since 1.0.0
 	 * @since 1.1.0 The settings route uses SettingsController and accepts `allow_agent_settings`.
 	 * @since 1.1.0 GET /stats delegates to StatsController.
+	 * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
 	 *
 	 * @return void
 	 */
@@ -125,12 +129,12 @@ class RestController {
 			array(
 				array(
 					'methods'             => 'GET',
-					'callback'            => array( self::class, 'get_links' ),
+					'callback'            => array( LinksController::class, 'get_links' ),
 					'permission_callback' => array( self::class, 'check_permission' ),
 				),
 				array(
 					'methods'             => 'POST',
-					'callback'            => array( self::class, 'create_link' ),
+					'callback'            => array( LinksController::class, 'create_link' ),
 					'permission_callback' => array( self::class, 'check_links_permission' ),
 				),
 			)
@@ -142,7 +146,7 @@ class RestController {
 			array(
 				array(
 					'methods'             => 'PUT',
-					'callback'            => array( self::class, 'update_link' ),
+					'callback'            => array( LinksController::class, 'update_link' ),
 					'permission_callback' => array( self::class, 'check_links_permission' ),
 					'args'                => array(
 						'id' => array(
@@ -152,7 +156,7 @@ class RestController {
 				),
 				array(
 					'methods'             => 'DELETE',
-					'callback'            => array( self::class, 'delete_link' ),
+					'callback'            => array( LinksController::class, 'delete_link' ),
 					'permission_callback' => array( self::class, 'check_links_permission' ),
 					'args'                => array(
 						'id' => array(
@@ -291,7 +295,7 @@ class RestController {
 			'/presets',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( self::class, 'create_preset' ),
+				'callback'            => array( PresetsController::class, 'create_preset' ),
 				'permission_callback' => array( self::class, 'check_links_permission' ),
 			)
 		);
@@ -301,7 +305,7 @@ class RestController {
 			'/presets/(?P<id>[a-z0-9_\-]+)',
 			array(
 				'methods'             => 'DELETE',
-				'callback'            => array( self::class, 'delete_preset' ),
+				'callback'            => array( PresetsController::class, 'delete_preset' ),
 				'permission_callback' => array( self::class, 'check_links_permission' ),
 				'args'                => array(
 					'id' => array(
@@ -775,453 +779,5 @@ class RestController {
 	 */
 	public static function get_diagnostics(): WP_REST_Response {
 		return new WP_REST_Response( array( 'checks' => Checks::run_all() ), 200 );
-	}
-
-	/**
-	 * GET utmatra/v1/links
-	 *
-	 * Click counts for all links come from a single GROUP BY query instead
-	 * of one COUNT query per link. The response also carries a `suggestions`
-	 * map of previously used source/medium/campaign values for the add-link
-	 * form datalists.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function get_links( WP_REST_Request $request ): WP_REST_Response {
-		global $wpdb;
-		$table  = esc_sql( Schema::table() );
-		$links  = LinkManager::all();
-		$result = array();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$counts_raw = $wpdb->get_results(
-			"SELECT link_id, COUNT(*) AS count FROM {$table} WHERE link_id != '' GROUP BY link_id",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		$counts = array();
-		foreach ( (array) $counts_raw as $row ) {
-			$counts[ (string) $row['link_id'] ] = (int) $row['count'];
-		}
-
-		foreach ( $links as $id => $link ) {
-			$result[] = self::format_link( $id, $link, $counts[ $id ] ?? 0 );
-		}
-
-		return new WP_REST_Response(
-			array(
-				'links'       => $result,
-				'suggestions' => self::suggestions( $links ),
-				'presets'     => self::presets(),
-			),
-			200
-		);
-	}
-
-	/**
-	 * Return the saved UTM presets for the add-link form's preset dropdown.
-	 *
-	 * @since 1.0.0
-	 * @return array<int, array<string, string>>
-	 */
-	private static function presets(): array {
-		$out = array();
-		foreach ( (array) get_option( 'utmatra_presets', array() ) as $id => $preset ) {
-			if ( ! is_array( $preset ) ) {
-				continue;
-			}
-			$out[] = array(
-				'id'          => (string) $id,
-				'name'        => (string) ( $preset['name'] ?? $id ),
-				'utm_source'  => (string) ( $preset['utm_source'] ?? '' ),
-				'utm_medium'  => (string) ( $preset['utm_medium'] ?? '' ),
-				'utm_term'    => (string) ( $preset['utm_term'] ?? '' ),
-				'utm_content' => (string) ( $preset['utm_content'] ?? '' ),
-			);
-		}
-		return $out;
-	}
-
-	/**
-	 * POST utmatra/v1/presets — save a named UTM preset.
-	 *
-	 * A preset is a reusable source/medium/term/content combination (e.g.
-	 * "Instagram Story") the admin can apply to the add-link form instead of
-	 * retyping the same values for every new campaign link. Saving a name
-	 * that already exists overwrites that preset — this is an explicit,
-	 * low-stakes admin action, not data with history worth preserving.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function create_preset( WP_REST_Request $request ): WP_REST_Response {
-		$name = sanitize_text_field( self::param_string( $request, 'name' ) );
-		$id   = sanitize_title( $name );
-
-		if ( '' === $id ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a preset name.', 'utmatra-utm-attribution-and-tracking' ) ),
-				400
-			);
-		}
-
-		$presets        = (array) get_option( 'utmatra_presets', array() );
-		$presets[ $id ] = array(
-			'name'        => $name,
-			'utm_source'  => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_source' ) ) ),
-			'utm_medium'  => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_medium' ) ) ),
-			'utm_term'    => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_term' ) ) ),
-			'utm_content' => self::normalize_utm( sanitize_text_field( self::param_string( $request, 'utm_content' ) ) ),
-		);
-		update_option( 'utmatra_presets', $presets );
-
-		return new WP_REST_Response( array_merge( array( 'id' => $id ), $presets[ $id ] ), 201 );
-	}
-
-	/**
-	 * DELETE utmatra/v1/presets/<id> — delete a saved UTM preset.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function delete_preset( WP_REST_Request $request ): WP_REST_Response {
-		$id      = (string) $request->get_param( 'id' );
-		$presets = (array) get_option( 'utmatra_presets', array() );
-
-		if ( ! isset( $presets[ $id ] ) ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Preset not found.', 'utmatra-utm-attribution-and-tracking' ) ),
-				404
-			);
-		}
-
-		unset( $presets[ $id ] );
-		update_option( 'utmatra_presets', $presets );
-
-		return new WP_REST_Response( array( 'deleted' => true ), 200 );
-	}
-
-	/**
-	 * Collect previously used UTM values for the add-link form datalists.
-	 *
-	 * Merges distinct values from recorded events (any row type — a value is
-	 * a useful suggestion regardless of whether it came from a click or a
-	 * conversion) with the values stored on managed links, deduped and capped
-	 * at 20 per field.
-	 *
-	 * @since 1.0.0
-	 * @param array<string, array<string, string>> $links Managed links keyed by slug.
-	 * @return array<string, string[]> Keys `sources`, `mediums`, `campaigns`.
-	 */
-	private static function suggestions( array $links ): array {
-		global $wpdb;
-		$table = esc_sql( Schema::table() );
-
-		$columns = array(
-			'sources'   => 'utm_source',
-			'mediums'   => 'utm_medium',
-			'campaigns' => 'utm_campaign',
-		);
-
-		$out = array();
-		foreach ( $columns as $key => $column ) {
-			// $column comes from the fixed map above, never from user input.
-			// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-			$values = (array) $wpdb->get_col(
-				"SELECT DISTINCT {$column} FROM {$table} WHERE {$column} != '' ORDER BY {$column} LIMIT 20"
-			);
-			// phpcs:enable
-
-			foreach ( $links as $link ) {
-				if ( ! empty( $link[ $column ] ) ) {
-					$values[] = (string) $link[ $column ];
-				}
-			}
-
-			$out[ $key ] = array_slice( array_values( array_unique( array_map( 'strval', $values ) ) ), 0, 20 );
-		}
-
-		return $out;
-	}
-
-	/**
-	 * Format a managed link for a REST response.
-	 *
-	 * Includes both the built destination (UTM parameters and link-level
-	 * custom parameter values appended) and the raw stored fields so the
-	 * dashboard edit form can pre-fill correctly.
-	 *
-	 * @since 1.0.0
-	 * @param string               $id     Link slug.
-	 * @param array<string, mixed> $link   Stored link fields.
-	 * @param int                  $clicks Recorded click count for the slug.
-	 * @return array<string, int|string|array<string, string>|stdClass> The custom entry is a stdClass (JSON object over REST).
-	 */
-	private static function format_link( string $id, array $link, int $clicks ): array {
-		return array(
-			'id'              => $id,
-			'label'           => $link['label'] ?? $id,
-			'destination'     => LinkManager::build_url( $link ),
-			'destination_raw' => $link['destination'] ?? '',
-			'redirect_url'    => LinkManager::redirect_url( $id ),
-			'clicks'          => $clicks,
-			'utm_campaign'    => $link['utm_campaign'] ?? '',
-			'utm_source'      => $link['utm_source'] ?? '',
-			'utm_medium'      => $link['utm_medium'] ?? '',
-			'utm_id'          => $link['utm_id'] ?? '',
-			'utm_term'        => $link['utm_term'] ?? '',
-			'utm_content'     => $link['utm_content'] ?? '',
-			'custom'          => (object) ( isset( $link['custom'] ) && is_array( $link['custom'] ) ? $link['custom'] : array() ),
-		);
-	}
-
-	/**
-	 * Read a request parameter as a string, rejecting non-scalar values.
-	 *
-	 * A JSON body can carry arrays/objects for any parameter; casting those
-	 * with `(string)` raises an Array-to-string warning and stores the
-	 * literal `Array`. Non-scalar values are treated as absent instead.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @param string          $key     Parameter name.
-	 * @return string
-	 */
-	private static function param_string( WP_REST_Request $request, string $key ): string {
-		$value = $request->get_param( $key );
-		return is_scalar( $value ) ? (string) $value : '';
-	}
-
-	/**
-	 * Validate and sanitize the link fields shared by create and update.
-	 *
-	 * Sanitizes the label and the six UTM fields and validates the
-	 * destination as an http(s) URL. UTM values are normalized for
-	 * consistent reporting (lowercase, whitespace collapsed to `-`) — the
-	 * dashboard JS applies the same normalization for immediate feedback,
-	 * but this server-side pass is authoritative. Custom parameter values
-	 * from the `custom` object are kept only for currently configured
-	 * names, sanitized and capped at 255 characters but deliberately not
-	 * normalized (coupon and affiliate codes are often case-sensitive);
-	 * unknown keys are dropped silently.
-	 *
-	 * @since 1.0.0
-	 * @since 1.0.0 Truncates by character, not byte.
-	 * @param WP_REST_Request $request REST request.
-	 * @return array<string, mixed>|WP_REST_Response Sanitized link fields, or a 400 response when the destination is invalid.
-	 */
-	private static function validate_link_input( WP_REST_Request $request ) {
-		$destination = esc_url_raw( self::param_string( $request, 'destination' ), array( 'http', 'https' ) );
-
-		if ( '' === $destination ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid destination URL (http or https).', 'utmatra-utm-attribution-and-tracking' ) ),
-				400
-			);
-		}
-
-		$link = array(
-			'label'       => sanitize_text_field( self::param_string( $request, 'label' ) ),
-			'destination' => $destination,
-		);
-		foreach ( array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ) as $key ) {
-			$link[ $key ] = self::normalize_utm( sanitize_text_field( self::param_string( $request, $key ) ) );
-		}
-
-		$custom_in = $request->get_param( 'custom' );
-		if ( is_array( $custom_in ) ) {
-			$custom = array();
-			foreach ( Tracker::custom_params() as $name ) {
-				$value = $custom_in[ $name ] ?? '';
-				if ( is_scalar( $value ) ) {
-					$value = mb_substr( sanitize_text_field( (string) $value ), 0, 255 );
-					if ( '' !== $value ) {
-						$custom[ $name ] = $value;
-					}
-				}
-			}
-			if ( array() !== $custom ) {
-				$link['custom'] = $custom;
-			}
-		}
-
-		return $link;
-	}
-
-	/**
-	 * Normalize a UTM value for consistent reporting.
-	 *
-	 * Lowercases the value and replaces whitespace runs with `-` so
-	 * `My Newsletter` and `my-newsletter` never fragment into two report
-	 * rows. Mirrors the normalization in assets/js/dashboard.js — keep in
-	 * sync.
-	 *
-	 * @since 1.0.0
-	 * @param string $value Sanitized UTM value.
-	 * @return string
-	 */
-	private static function normalize_utm( string $value ): string {
-		$value = trim( $value );
-		if ( '' === $value ) {
-			return '';
-		}
-		$value = (string) preg_replace( '/\s+/u', '-', $value );
-		return function_exists( 'mb_strtolower' ) ? mb_strtolower( $value ) : strtolower( $value );
-	}
-
-	/**
-	 * POST utmatra/v1/links — create a managed link.
-	 *
-	 * The slug is derived from the submitted label when no explicit id is
-	 * given. Fails when the slug is empty, reserved (`incoming`, `visit`,
-	 * `order` and `lead` name event kinds in the events table), already in
-	 * use, or the destination is not a valid http(s) URL.
-	 *
-	 * @since 1.0.0
-	 * @since 1.0.0 Caps the slug at 64 characters, the click column width,
-	 *              suffixing a derived slug that collides with a different
-	 *              label after the cut.
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function create_link( WP_REST_Request $request ): WP_REST_Response {
-		$label    = sanitize_text_field( self::param_string( $request, 'label' ) );
-		$id_param = self::param_string( $request, 'id' );
-		$id       = sanitize_key( '' !== $id_param ? $id_param : sanitize_title( $label ) );
-		// Clicks store link_id in a VARCHAR(64) column, so a longer slug would
-		// redirect but never match its own click rows. Cap it here, before the
-		// reserved and duplicate checks.
-		if ( strlen( $id ) > 64 ) {
-			$id = rtrim( substr( $id, 0, 64 ), '-_' );
-			// Two different long labels can share their first 64 characters
-			// (a duplicated link adds " (copy)" at the end), so a derived slug
-			// that collides with another label after the cut gets a numeric
-			// suffix. The same label again still fails as a duplicate.
-			$existing = '' === $id_param ? LinkManager::get( $id ) : null;
-			if ( null !== $existing && ( $existing['label'] ?? '' ) !== $label ) {
-				$base = rtrim( substr( $id, 0, 60 ), '-_' );
-				for ( $n = 2; $n < 100; $n++ ) {
-					$id    = $base . '-' . $n;
-					$taken = LinkManager::get( $id );
-					// A slug already holding this label falls through to the
-					// duplicate error below.
-					if ( null === $taken || ( $taken['label'] ?? '' ) === $label ) {
-						break;
-					}
-				}
-			}
-		}
-
-		if ( '' === $id || in_array( $id, array( 'incoming', 'visit', 'order', 'lead' ), true ) ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Please provide a valid link slug (incoming, visit, order and lead are reserved).', 'utmatra-utm-attribution-and-tracking' ) ),
-				400
-			);
-		}
-
-		$link = self::validate_link_input( $request );
-		if ( $link instanceof WP_REST_Response ) {
-			return $link;
-		}
-
-		if ( null !== LinkManager::get( $id ) ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'A link with this slug already exists.', 'utmatra-utm-attribution-and-tracking' ) ),
-				409
-			);
-		}
-
-		if ( '' === $link['label'] ) {
-			$link['label'] = $id;
-		}
-
-		LinkManager::save( $id, $link );
-
-		return new WP_REST_Response( self::format_link( $id, $link, 0 ), 201 );
-	}
-
-	/**
-	 * PUT utmatra/v1/links/<id> — update a managed link.
-	 *
-	 * Updates the label, destination, the six UTM fields and the custom
-	 * parameter values of an existing link. Stored values for custom
-	 * parameters no longer configured are kept, so re-adding the parameter
-	 * restores them. The slug is immutable — renaming would orphan recorded
-	 * events. Returns 404 for an unknown slug and 400 for an invalid
-	 * destination.
-	 *
-	 * @since 1.0.0
-	 * @since 1.0.0 Keeps stored values for custom parameters no longer configured.
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function update_link( WP_REST_Request $request ): WP_REST_Response {
-		global $wpdb;
-		$id = (string) $request->get_param( 'id' );
-
-		$stored = LinkManager::get( $id );
-		if ( null === $stored ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Link not found.', 'utmatra-utm-attribution-and-tracking' ) ),
-				404
-			);
-		}
-
-		$link = self::validate_link_input( $request );
-		if ( $link instanceof WP_REST_Response ) {
-			return $link;
-		}
-
-		if ( '' === $link['label'] ) {
-			$link['label'] = $id;
-		}
-
-		// Values for parameters no longer configured are not in the form, so
-		// they are carried over: re-adding the parameter brings them back.
-		$kept = array_diff_key( is_array( $stored['custom'] ?? null ) ? $stored['custom'] : array(), array_flip( Tracker::custom_params() ) );
-		if ( array() !== $kept ) {
-			$link['custom'] = ( $link['custom'] ?? array() ) + $kept;
-		}
-
-		LinkManager::save( $id, $link );
-
-		$table = esc_sql( Schema::table() );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$clicks = (int) $wpdb->get_var(
-			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE link_id = %s", $id )
-		);
-		// phpcs:enable
-
-		return new WP_REST_Response( self::format_link( $id, $link, $clicks ), 200 );
-	}
-
-	/**
-	 * DELETE utmatra/v1/links/<id> — delete a managed link.
-	 *
-	 * Recorded click events are kept for historical stats; only the managed
-	 * link definition is removed.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function delete_link( WP_REST_Request $request ): WP_REST_Response {
-		$id = (string) $request->get_param( 'id' );
-
-		if ( null === LinkManager::get( $id ) ) {
-			return new WP_REST_Response(
-				array( 'message' => __( 'Link not found.', 'utmatra-utm-attribution-and-tracking' ) ),
-				404
-			);
-		}
-
-		LinkManager::delete( $id );
-
-		return new WP_REST_Response( array( 'deleted' => true ), 200 );
 	}
 }
