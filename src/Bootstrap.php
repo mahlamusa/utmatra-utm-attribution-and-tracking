@@ -13,6 +13,7 @@
  * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
  * @since 1.1.0 Loads the notifications service and controller.
  * @since 1.1.0 Loads the diagnostics service and controller.
+ * @since 1.1.0 Loads the journeys service and controller.
  *
  * @package Utmatra
  */
@@ -31,6 +32,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
  * @since 1.1.0 Loads the notifications service and controller.
  * @since 1.1.0 Loads the diagnostics service and controller.
+ * @since 1.1.0 Loads the journeys service and controller.
  */
 class Bootstrap {
 
@@ -47,6 +49,7 @@ class Bootstrap {
 	 * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
 	 * @since 1.1.0 Loads the notifications service and controller.
 	 * @since 1.1.0 Loads the diagnostics service and controller.
+	 * @since 1.1.0 Loads the journeys service and controller.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -104,6 +107,8 @@ class Bootstrap {
 		require_once $base . 'Rest/Controllers/NotificationsController.php';
 		require_once $base . 'Services/DiagnosticsService.php';
 		require_once $base . 'Rest/Controllers/DiagnosticsController.php';
+		require_once $base . 'Services/JourneysService.php';
+		require_once $base . 'Rest/Controllers/JourneysController.php';
 		require_once $base . 'Abilities/AbilityDefinition.php';
 		require_once $base . 'Abilities/EventSchema.php';
 		require_once $base . 'Abilities/OptIn.php';
