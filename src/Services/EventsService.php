@@ -70,7 +70,7 @@ class EventsService {
 		global $wpdb;
 		$table   = esc_sql( Schema::table() );
 		$columns = self::EVENT_COLUMNS;
-		$where   = self::date_where( $args );
+		$where   = DateRange::where_from_args( $args );
 
 		$channel = sanitize_key( (string) ( $args['channel'] ?? '' ) );
 		if ( '' !== $channel ) {
@@ -313,28 +313,10 @@ class EventsService {
 	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
 	 */
 	private static function export_where( array $args ): string {
-		$where = self::date_where( $args );
+		$where = DateRange::where_from_args( $args );
 		if ( empty( $args['include_visits'] ) ) {
 			$where .= " AND link_id != 'visit'";
 		}
 		return $where;
-	}
-
-	/**
-	 * The date range and campaign WHERE clause shared with the stats report.
-	 *
-	 * @since 1.1.0
-	 *
-	 * @param array<string, mixed> $args Keys: period (default 30), campaign, since, until.
-	 *
-	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
-	 */
-	private static function date_where( array $args ): string {
-		$since     = sanitize_text_field( (string) ( $args['since'] ?? '' ) );
-		$until     = sanitize_text_field( (string) ( $args['until'] ?? '' ) );
-		$now_local = DateRange::resolve_now_local( $until, wp_timezone() );
-		$period    = DateRange::resolve_period( $since, $until, absint( $args['period'] ?? 30 ), $now_local );
-
-		return DateRange::build_where( $period, sanitize_text_field( (string) ( $args['campaign'] ?? '' ) ), $now_local );
 	}
 }

@@ -37,10 +37,7 @@ class EventsController {
 	 * @return WP_REST_Response
 	 */
 	public static function get_events( WP_REST_Request $request ): WP_REST_Response {
-		$args = array();
-		foreach ( array( 'period', 'campaign', 'since', 'until', 'channel', 'kind', 'visitor_id', 'page', 'per_page' ) as $key ) {
-			$args[ $key ] = $request->get_param( $key );
-		}
+		$args = RequestInput::pick( $request, array( 'period', 'campaign', 'since', 'until', 'channel', 'kind', 'visitor_id', 'page', 'per_page' ) );
 
 		return new WP_REST_Response( EventsService::get_events( $args ), 200 );
 	}
@@ -59,10 +56,7 @@ class EventsController {
 	 * @return WP_REST_Response
 	 */
 	public static function export_events( WP_REST_Request $request ): WP_REST_Response {
-		$args = array();
-		foreach ( array( 'period', 'campaign', 'since', 'until', 'include_visits' ) as $key ) {
-			$args[ $key ] = $request->get_param( $key );
-		}
+		$args = RequestInput::pick( $request, array( 'period', 'campaign', 'since', 'until', 'include_visits' ) );
 
 		return new WP_REST_Response( array( 'rows' => EventsService::export( $args, EventsService::REST_EXPORT_LIMIT ) ), 200 );
 	}

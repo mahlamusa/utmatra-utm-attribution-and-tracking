@@ -10,6 +10,7 @@
 namespace Utmatra\Abilities\Definitions;
 
 use Utmatra\Abilities\AbilityDefinition;
+use Utmatra\Abilities\EventSchema;
 use Utmatra\Capabilities;
 use Utmatra\Services\StatsService;
 
@@ -107,36 +108,11 @@ class GetStats implements AbilityDefinition {
 	 * @return array<string, mixed>
 	 */
 	private function input_schema(): array {
-		$date = array(
-			'type'    => 'string',
-			'pattern' => '^(\d{4}-\d{2}-\d{2})?$',
-			'default' => '',
-		);
-
 		return array(
 			'type'                 => 'object',
 			'default'              => array(),
 			'additionalProperties' => false,
-			'properties'           => array(
-				'period'   => array(
-					'type'        => 'integer',
-					'minimum'     => 1,
-					'maximum'     => 365,
-					'default'     => 30,
-					'description' => __( 'Number of days to report on, ending today (or on `until`). Ignored when `since` and `until` form a valid range.', 'utmatra-utm-attribution-and-tracking' ),
-				),
-				'campaign' => array(
-					'type'        => 'string',
-					'default'     => '',
-					'description' => __( 'Only count events with this utm_campaign value. Empty for all campaigns.', 'utmatra-utm-attribution-and-tracking' ),
-				),
-				'since'    => $date + array(
-					'description' => __( 'Custom range start date (YYYY-MM-DD, site timezone). Used together with `until`.', 'utmatra-utm-attribution-and-tracking' ),
-				),
-				'until'    => $date + array(
-					'description' => __( 'Custom range end date (YYYY-MM-DD, site timezone, not in the future).', 'utmatra-utm-attribution-and-tracking' ),
-				),
-			),
+			'properties'           => EventSchema::date_range_properties(),
 		);
 	}
 

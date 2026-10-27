@@ -92,6 +92,34 @@ return array(
 		);
 	},
 
+	'where from args resolves a custom range'         => static function () {
+		utmatra_assert_same(
+			"clicked_at >= '2025-03-01 00:00:00' AND clicked_at <= '2025-03-10 23:59:59' AND utm_campaign = 'spring-sale'",
+			DateRange::where_from_args(
+				array(
+					'since'    => '2025-03-01',
+					'until'    => '2025-03-10',
+					'campaign' => 'spring-sale',
+				)
+			)
+		);
+	},
+
+	'where from args matches build where'             => static function () {
+		$now = DateRange::resolve_now_local( '2025-03-10', wp_timezone() );
+		utmatra_assert_same( DateRange::build_where( 30, '', $now ), DateRange::where_from_args( array( 'until' => '2025-03-10' ) ) );
+		utmatra_assert_same(
+			DateRange::build_where( 7, 'x', $now ),
+			DateRange::where_from_args(
+				array(
+					'period'   => '7',
+					'campaign' => 'x',
+					'until'    => '2025-03-10',
+				)
+			)
+		);
+	},
+
 	'previous day where is the day-aligned window'    => static function () {
 		utmatra_assert_same(
 			"clicked_at >= '2025-02-22 22:00:00' AND clicked_at < '2025-03-02 22:00:00'",

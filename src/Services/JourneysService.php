@@ -42,7 +42,7 @@ class JourneysService {
 	 *
 	 * @since 1.1.0 Moved from RestController::get_journeys().
 	 *
-	 * @param array<string, mixed> $args Keys: period, since, until, page, per_page.
+	 * @param array<string, mixed> $args Keys: period, since, until, page, per_page. A campaign key, if present, filters too (the REST route and ability never pass one).
 	 *
 	 * @return array{journeys: array<int, array<string, mixed>>, total: int, page: int, per_page: int, total_pages: int, without_visitor: int}
 	 */
@@ -51,11 +51,7 @@ class JourneysService {
 		$table   = esc_sql( Schema::table() );
 		$columns = EventsService::EVENT_COLUMNS;
 
-		$since     = sanitize_text_field( (string) ( $args['since'] ?? '' ) );
-		$until     = sanitize_text_field( (string) ( $args['until'] ?? '' ) );
-		$now_local = DateRange::resolve_now_local( $until, wp_timezone() );
-		$period    = DateRange::resolve_period( $since, $until, absint( $args['period'] ?? 30 ), $now_local );
-		$where     = DateRange::build_where( $period, '', $now_local );
+		$where = DateRange::where_from_args( $args );
 
 		$per_page = min( 100, max( 1, absint( $args['per_page'] ?? 50 ) ) );
 		$page     = max( 1, absint( $args['page'] ?? 1 ) );

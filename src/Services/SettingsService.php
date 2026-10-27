@@ -12,6 +12,7 @@ namespace Utmatra\Services;
 use Utmatra\Abilities\OptIn;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Services\Support\InputValue;
 use Utmatra\Services\Support\Result;
 use Utmatra\Tracking\Attribution;
 use Utmatra\Tracking\Tracker;
@@ -100,7 +101,7 @@ class SettingsService {
 	public static function save( array $params ): Result {
 		$custom_names = Tracker::custom_params();
 		if ( array_key_exists( 'custom_params', $params ) ) {
-			$validated = self::validate_custom_params( self::string_value( $params['custom_params'] ) );
+			$validated = self::validate_custom_params( InputValue::string( $params, 'custom_params' ) );
 			if ( $validated->is_error() ) {
 				return $validated;
 			}
@@ -112,14 +113,14 @@ class SettingsService {
 		$weekly    = array_key_exists( 'weekly_email', $params ) ? (bool) $params['weekly_email'] : WeeklyEmail::enabled();
 		$cookie    = array_key_exists( 'cookie_days', $params ) ? absint( $params['cookie_days'] ) : (int) get_option( 'utmatra_cookie_days', 90 );
 		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
-		$webhook   = array_key_exists( 'webhook_url', $params ) ? esc_url_raw( self::string_value( $params['webhook_url'] ), array( 'http', 'https' ) ) : ConversionWebhook::url();
-		$preset    = array_key_exists( 'webhook_preset', $params ) ? self::string_value( $params['webhook_preset'] ) : ConversionWebhook::preset();
+		$webhook   = array_key_exists( 'webhook_url', $params ) ? esc_url_raw( InputValue::string( $params, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
+		$preset    = array_key_exists( 'webhook_preset', $params ) ? InputValue::string( $params, 'webhook_preset' ) : ConversionWebhook::preset();
 		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
 			$preset = 'generic';
 		}
 		$orders  = array_key_exists( 'webhook_orders', $params ) ? (bool) $params['webhook_orders'] : (bool) $events['orders'];
 		$leads   = array_key_exists( 'webhook_leads', $params ) ? (bool) $params['webhook_leads'] : (bool) $events['leads'];
-		$consent = array_key_exists( 'consent_category', $params ) ? self::string_value( $params['consent_category'] ) : Attribution::consent_category();
+		$consent = array_key_exists( 'consent_category', $params ) ? InputValue::string( $params, 'consent_category' ) : Attribution::consent_category();
 		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
 			$consent = 'marketing';
 		}
@@ -226,22 +227,5 @@ class SettingsService {
 		}
 
 		return Result::ok( $names );
-	}
-
-	/**
-	 * A raw value as a string; non-scalar values count as empty.
-	 *
-	 * A JSON body can carry arrays/objects for any parameter; casting those
-	 * with `(string)` raises an Array-to-string warning and stores the
-	 * literal `Array`.
-	 *
-	 * @since 1.1.0
-	 *
-	 * @param mixed $value Raw value.
-	 *
-	 * @return string
-	 */
-	private static function string_value( $value ): string {
-		return is_scalar( $value ) ? (string) $value : '';
 	}
 }
