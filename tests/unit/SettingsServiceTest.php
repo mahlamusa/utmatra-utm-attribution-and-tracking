@@ -16,14 +16,18 @@ if ( ! class_exists( WeeklyEmail::class ) ) {
 }
 
 return array(
-	'a partial save takes the settings lock and keeps the stored values it was not sent' => static function () {
-		$GLOBALS['utmatra_test']['options'] = array(
-			'utmatra_cookie_days'    => 45,
-			'utmatra_webhook_events' => array(
-				'orders' => false,
-				'leads'  => true,
-			),
-		);
+	'a partial save reads the stored settings after taking the lock'                    => static function () {
+		$GLOBALS['utmatra_test']['options'] = array( 'utmatra_cookie_days' => 90 );
+		// Another save finishes while this one waits: its values land when the lock drops the cache.
+		$GLOBALS['utmatra_test']['on_cache_delete'] = static function ( $group, $key ) {
+			if ( 'options:alloptions' === $group . ':' . $key ) {
+				$GLOBALS['utmatra_test']['options']['utmatra_cookie_days']    = 45;
+				$GLOBALS['utmatra_test']['options']['utmatra_webhook_events'] = array(
+					'orders' => false,
+					'leads'  => true,
+				);
+			}
+		};
 
 		$result = SettingsService::save( array( 'webhook_leads' => false ) );
 
@@ -37,7 +41,6 @@ return array(
 			get_option( 'utmatra_webhook_events' )
 		);
 		utmatra_assert_same( 2, count( utmatra_test_lock_queries() ) );
-		utmatra_assert_true( in_array( 'options:alloptions', $GLOBALS['utmatra_test']['cache_deleted'], true ) );
 	},
 
 	'a timed-out lock returns 503 and saves nothing'                                     => static function () {

@@ -15,7 +15,8 @@ defined( 'ABSPATH' ) || exit;
  * OptionLock
  *
  * Links and presets are stored as one array per option, so every write
- * reads the whole array, changes one key and writes it back. Two
+ * reads the whole array, changes one key and writes it back; a settings
+ * save reads every setting and writes them all back. Two
  * overlapping writes (parallel agent calls) would otherwise both succeed
  * while one change is lost. A MySQL named lock makes them run one at a
  * time.

@@ -878,6 +878,10 @@ function utmatra_test_lock_queries(): array {
 /**
  * Stub of wp_cache_delete(); records the group and key.
  *
+ * Calls the `on_cache_delete` test state callable, when set, with the
+ * group and key, so a test can change stored options the moment a lock
+ * drops the cache.
+ *
  * @since 1.1.0
  *
  * @param string $key   Cache key.
@@ -887,6 +891,9 @@ function utmatra_test_lock_queries(): array {
  */
 function wp_cache_delete( $key, $group = '' ) {
 	$GLOBALS['utmatra_test']['cache_deleted'][] = $group . ':' . $key;
+	if ( isset( $GLOBALS['utmatra_test']['on_cache_delete'] ) ) {
+		( $GLOBALS['utmatra_test']['on_cache_delete'] )( $group, $key );
+	}
 	return true;
 }
 

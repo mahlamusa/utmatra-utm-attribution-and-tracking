@@ -160,7 +160,7 @@ class UpdateSettings implements AbilityDefinition {
 	 *
 	 * @param array<string, mixed> $input Validated input.
 	 *
-	 * @return array<string, mixed>|WP_Error The settings after the save, or the validation error.
+	 * @return array<string, mixed>|WP_Error The settings after the save, the validation error, or a 503 `utmatra_busy` error when the settings lock times out.
 	 */
 	public static function execute( $input = array() ) {
 		// Core validates against the schema first, but older run controllers

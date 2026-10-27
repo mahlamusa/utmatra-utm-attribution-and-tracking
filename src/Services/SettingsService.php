@@ -108,7 +108,6 @@ class SettingsService {
 	 * settings lock, so parallel partial saves (for example several agent
 	 * calls at once) each keep the others' changes.
 	 *
-	 * @since 1.1.0
 	 * @since 1.1.0 Reads and writes the settings under the settings lock; custom parameters are validated before it is taken.
 	 *
 	 * @param array<string, mixed> $params Sent setting name => raw value.
