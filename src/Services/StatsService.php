@@ -27,6 +27,8 @@ defined( 'ABSPATH' ) || exit;
  * site timezone by shifting `clicked_at` with the site's current UTC
  * offset. Known limitation: rows recorded under a different DST offset
  * than today's can shift by an hour — acceptable for daily aggregation.
+ * A row shifted before the first day of the period is left out of
+ * the daily series, so the series can sum to less than `total`.
  *
  * Click-oriented queries exclude conversion rows (`is_conversion = 1`,
  * written by the WooCommerce integration and the lead recorder) so a
