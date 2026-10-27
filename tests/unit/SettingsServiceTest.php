@@ -22,6 +22,7 @@ return array(
 		$GLOBALS['utmatra_test']['on_cache_delete'] = static function ( $group, $key ) {
 			if ( 'options:alloptions' === $group . ':' . $key ) {
 				$GLOBALS['utmatra_test']['options']['utmatra_cookie_days']    = 45;
+				$GLOBALS['utmatra_test']['options']['utmatra_custom_params']  = array( 'coupon' );
 				$GLOBALS['utmatra_test']['options']['utmatra_webhook_events'] = array(
 					'orders' => false,
 					'leads'  => true,
@@ -33,6 +34,7 @@ return array(
 
 		utmatra_assert_same( 200, $result->status() );
 		utmatra_assert_same( 45, get_option( 'utmatra_cookie_days' ) );
+		utmatra_assert_same( array( 'coupon' ), $result->data()['custom_params'] );
 		utmatra_assert_same(
 			array(
 				'orders' => false,
