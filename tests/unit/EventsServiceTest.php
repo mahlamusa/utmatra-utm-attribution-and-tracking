@@ -115,6 +115,7 @@ return array(
 			'https://example.test/?key=wc_order_abc&key=foo&a=1' => 'https://example.test/?a=1',
 			'https://example.test/?key%5B%5D=wc_order_abc&a=1'  => 'https://example.test/?a=1',
 			'https://example.test/?k%65y=WC_ORDER_ABC&a=1'      => 'https://example.test/?a=1',
+			'https://example.test/wp-login.php?redirect_to=https%3A%2F%2Fexample.test%2F%3Fkey%3Dwc_order_abc&a=1' => 'https://example.test/wp-login.php?a=1',
 		);
 
 		foreach ( $urls as $url => $expected ) {

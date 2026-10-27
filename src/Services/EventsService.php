@@ -285,11 +285,12 @@ class EventsService {
 	 * Visit, incoming and lead rows store the landing or form page and every
 	 * row stores the referring page, so an order-received, order-pay or
 	 * download link carries its order key into them (as `key`, or as `order`
-	 * on download links). Every query argument whose value starts with
-	 * `wc_order_` (any case, duplicates and array forms included) is
-	 * removed, plus `key` whatever it holds when `$any_key` is set; any
-	 * other URL is returned exactly as stored (remove_query_arg()
-	 * re-encodes the query string).
+	 * on download links, or inside an encoded URL such as `redirect_to`).
+	 * Every query argument whose decoded value contains `wc_order_` (any
+	 * case, duplicates and array forms included; a bracketed name drops the
+	 * whole argument) is removed, plus `key` whatever it holds when
+	 * `$any_key` is set; any other URL is returned exactly as stored
+	 * (remove_query_arg() re-encodes the query string).
 	 *
 	 * @since 1.1.0
 	 *
@@ -308,7 +309,7 @@ class EventsService {
 			if ( '' === $name ) {
 				continue;
 			}
-			if ( ( $any_key && 'key' === $name ) || 0 === stripos( trim( urldecode( $parts[1] ?? '' ) ), 'wc_order_' ) ) {
+			if ( ( $any_key && 'key' === $name ) || false !== stripos( urldecode( $parts[1] ?? '' ), 'wc_order_' ) ) {
 				$names[] = $name;
 			}
 		}
