@@ -200,15 +200,15 @@ Only read abilities carry `meta.mcp.public = true`, so the MCP Adapter's default
 
 **Opt-in.** The settings abilities fail with HTTP 403 (`utmatra_agent_settings_disabled`) until a user who can manage settings switches on "Allow AI agents to change settings" on the dashboard settings card (option `utmatra_allow_agent_settings`, off by default). The switch is saved only from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request. The `utmatra_abilities_allow_settings_writes` filter (bool) overrides it.
 
-**Guard rails.** `update-settings` cannot change the webhook URL (unknown fields are rejected) and accepts `retention_days` of 0 (keep forever) or 30 to 3,650; the dashboard keeps its own range. `delete-link` and `delete-preset` require `confirm: true`. Read abilities that return visitor-recorded values (referrers, UTM values, destinations) tell the agent to treat them as untrusted data, never as instructions. IP hashes, user agents and submitted form values are never returned.
+**Guard rails.** `update-settings` cannot change the webhook URL (unknown fields are rejected) and accepts `retention_days` of 0 (keep forever) or 30 to 3,650; the dashboard keeps its own range. `delete-link` and `delete-preset` require `confirm: true`. Read abilities that return visitor-recorded values (referrers, UTM values, destinations) tell the agent to treat them as untrusted data, never as instructions. IP hashes, user agents and submitted form values are never returned. The opt-in and these guard rails apply to abilities only; the `utmatra/v1` REST routes the dashboard uses keep their behaviour for users with the matching capability.
 
 **Audit hook.** The `utmatra_ability_executed` action receives the ability id, the user id and the input keys (never the values). Link, preset and settings abilities fire it only after a successful change; the test email and test webhook fire it after every send attempt. The plugin logs nothing itself.
 
 **Capabilities.** The dashboard menu, the admin Dashboard widget, the REST routes and the abilities all check three capabilities:
 
 * `utmatra_view_reports` — the dashboard, the widget and every read route and ability.
-* `utmatra_manage_links` — create, update and delete links and presets. Implies view.
-* `utmatra_manage_settings` — save settings, send the test email and test webhook. Implies view.
+* `utmatra_manage_links` — create, update and delete links and presets (abilities and the dashboard's write routes). Implies view.
+* `utmatra_manage_settings` — save settings, send the test email and test webhook (abilities and the dashboard's write routes). Implies view.
 
 The administrator role receives all three on activation and upgrade (per site on multisite; super admins always pass), and uninstalling removes them from every role. Grant them to other roles with a role editor, or remap one with the `utmatra_capability_map` filter, which receives and returns an array of Utmatra capability => capability to check:
 
