@@ -177,7 +177,20 @@ foreach ( $utmatra_snapshot_events as $utmatra_snapshot_event ) {
 	$utmatra_snapshot_row['user_agent']    = 'SnapshotHarness/1.0';
 	$utmatra_snapshot_row['is_conversion'] = $utmatra_snapshot_row['is_conversion'] ?? 0;
 
-	$wpdb->insert( $utmatra_snapshot_table, $utmatra_snapshot_row );
+	// Explicit formats, as Tracker::record() passes: without them core types
+	// link_id as %d (its wp_links column) and stores every slug as 0.
+	$utmatra_snapshot_formats = array();
+	foreach ( array_keys( $utmatra_snapshot_row ) as $utmatra_snapshot_column ) {
+		if ( 'is_conversion' === $utmatra_snapshot_column ) {
+			$utmatra_snapshot_formats[] = '%d';
+		} elseif ( 'order_total' === $utmatra_snapshot_column ) {
+			$utmatra_snapshot_formats[] = '%f';
+		} else {
+			$utmatra_snapshot_formats[] = '%s';
+		}
+	}
+
+	$wpdb->insert( $utmatra_snapshot_table, $utmatra_snapshot_row, $utmatra_snapshot_formats );
 }
 
 echo 'Seeded ' . count( $utmatra_snapshot_events ) . " events.\n";
