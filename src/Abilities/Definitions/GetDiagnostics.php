@@ -51,7 +51,6 @@ class GetDiagnostics implements AbilityDefinition {
 				'type'                 => 'object',
 				'default'              => array(),
 				'additionalProperties' => false,
-				'properties'           => array(),
 			),
 			'output_schema'       => $this->output_schema(),
 			'execute_callback'    => array( self::class, 'execute' ),

@@ -51,7 +51,6 @@ class SendTestEmail implements AbilityDefinition {
 			'description'         => __( 'Sends the weekly UTM campaign report email to the report recipient now, even when the weekly email is off. Requires an administrator to allow AI agents to change settings. Returns sent: false when the email could not be sent.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => array(
 				'type'                 => 'object',
-				'properties'           => array(),
 				'additionalProperties' => false,
 				'default'              => array(),
 			),

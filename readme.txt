@@ -314,6 +314,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Changed: the dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
 * Changed: the REST handlers now share a service layer with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
 * Fixed: UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. A preset saved before 1.1.0 with such a name must be saved again under the same name; the new entry replaces the old one.
+* Fixed: ability input is coerced to its schema types, so `false` sent as a string (WordPress 6.9 and 7.0 query strings, direct `execute()` callers) stays false for `export-events`, `update-settings` and `send-test-webhook`.
 * Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 * Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
 * Upgrade note: custom roles that are not administrator but hold `manage_options` lose access to the Utmatra screens and REST routes unless granted one of the new capabilities (or remapped with `utmatra_capability_map`).

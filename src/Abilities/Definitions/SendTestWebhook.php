@@ -51,22 +51,7 @@ class SendTestWebhook implements AbilityDefinition {
 		return array(
 			'label'               => __( 'Send a test Utmatra webhook', 'utmatra-utm-attribution-and-tracking' ),
 			'description'         => __( 'Sends a test payload to the saved conversion webhook URL now. preset and leads override the saved webhook preset and form lead toggle for this test only. Requires an administrator to allow AI agents to change settings. Returns sent: false when no webhook URL is saved, no event is enabled, the hubspot preset is tested without form leads or the receiver did not accept the payload.', 'utmatra-utm-attribution-and-tracking' ),
-			'input_schema'        => array(
-				'type'                 => 'object',
-				'properties'           => array(
-					'preset' => array(
-						'type'        => 'string',
-						'enum'        => ConversionWebhook::PRESETS,
-						'description' => __( 'Payload format to test. Defaults to the saved preset.', 'utmatra-utm-attribution-and-tracking' ),
-					),
-					'leads'  => array(
-						'type'        => 'boolean',
-						'description' => __( 'Send the form lead test (true) or the order test (false). Defaults to the saved form lead toggle.', 'utmatra-utm-attribution-and-tracking' ),
-					),
-				),
-				'additionalProperties' => false,
-				'default'              => array(),
-			),
+			'input_schema'        => self::input_schema(),
 			'output_schema'       => array(
 				'type'       => 'object',
 				'properties' => array(
@@ -91,6 +76,32 @@ class SendTestWebhook implements AbilityDefinition {
 	}
 
 	/**
+	 * JSON Schema of the input.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<string, mixed>
+	 */
+	private static function input_schema(): array {
+		return array(
+			'type'                 => 'object',
+			'properties'           => array(
+				'preset' => array(
+					'type'        => 'string',
+					'enum'        => ConversionWebhook::PRESETS,
+					'description' => __( 'Payload format to test. Defaults to the saved preset.', 'utmatra-utm-attribution-and-tracking' ),
+				),
+				'leads'  => array(
+					'type'        => 'boolean',
+					'description' => __( 'Send the form lead test (true) or the order test (false). Defaults to the saved form lead toggle.', 'utmatra-utm-attribution-and-tracking' ),
+				),
+			),
+			'additionalProperties' => false,
+			'default'              => array(),
+		);
+	}
+
+	/**
 	 * Permission callback: manage settings plus the site owner's opt-in.
 	 *
 	 * @since 1.1.0
@@ -110,6 +121,8 @@ class SendTestWebhook implements AbilityDefinition {
 	 *
 	 * Fires `utmatra_ability_executed` with the input keys (never values)
 	 * after the send, whether or not the receiver accepted the payload.
+	 * Coerces the input to the schema types first: older Abilities API run
+	 * controllers pass query string values such as "false" through as strings.
 	 *
 	 * @since 1.1.0
 	 *
@@ -118,7 +131,7 @@ class SendTestWebhook implements AbilityDefinition {
 	 * @return array{sent: bool}
 	 */
 	public static function execute( $input = array() ): array {
-		$input  = (array) $input;
+		$input  = rest_sanitize_value_from_schema( (array) $input, self::input_schema(), 'input' );
 		$result = NotificationsService::send_test_webhook(
 			isset( $input['preset'] ) ? (string) $input['preset'] : '',
 			isset( $input['leads'] ) ? (bool) $input['leads'] : null

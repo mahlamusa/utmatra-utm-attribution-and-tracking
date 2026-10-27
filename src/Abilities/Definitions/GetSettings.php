@@ -51,7 +51,6 @@ class GetSettings implements AbilityDefinition {
 			'description'         => __( 'Returns the Utmatra settings: event retention, weekly email, attribution window, webhook preset and events, consent category, untagged visit tracking, custom parameters and whether AI agents may change settings. The webhook URL is reduced to its host.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => array(
 				'type'                 => 'object',
-				'properties'           => array(),
 				'additionalProperties' => false,
 				'default'              => array(),
 			),

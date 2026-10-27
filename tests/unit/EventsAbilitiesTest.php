@@ -94,4 +94,14 @@ return array(
 		utmatra_assert_same( '', $output['hint'] );
 		utmatra_assert_same( $GLOBALS['utmatra_test']['db_rows'], $output['rows'] );
 	},
+
+	'export include_visits sent as the string false excludes visits' => static function () {
+		( new ExportEvents() )->execute( array( 'include_visits' => 'false' ) );
+		utmatra_assert_true( false !== strpos( $GLOBALS['utmatra_test']['queries'][0], "link_id != 'visit'" ) );
+	},
+
+	'export include_visits sent as the string true includes visits' => static function () {
+		( new ExportEvents() )->execute( array( 'include_visits' => 'true' ) );
+		utmatra_assert_false( strpos( $GLOBALS['utmatra_test']['queries'][0], "link_id != 'visit'" ) );
+	},
 );
