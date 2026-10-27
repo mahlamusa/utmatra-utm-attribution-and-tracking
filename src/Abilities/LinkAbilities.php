@@ -66,9 +66,12 @@ class LinkAbilities {
 	public static function written( string $ability, array $input, Result $result ) {
 		if ( $result->is_ok() ) {
 			/**
-			 * Fires after a Utmatra write ability changed something.
+			 * Fires after a Utmatra write ability ran.
 			 *
-			 * Utmatra keeps no log itself; hook here to record agent writes.
+			 * The link, preset and settings abilities fire it only after a
+			 * successful change; the test email and test webhook abilities
+			 * fire it after every send attempt, sent or not. Utmatra keeps no
+			 * log itself; hook here to record agent writes.
 			 *
 			 * @since 1.1.0
 			 *

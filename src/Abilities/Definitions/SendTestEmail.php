@@ -48,7 +48,7 @@ class SendTestEmail implements AbilityDefinition {
 	public function args(): array {
 		return array(
 			'label'               => __( 'Send a test Utmatra report email', 'utmatra-utm-attribution-and-tracking' ),
-			'description'         => __( 'Sends the weekly UTM campaign report email to the report recipient now, even when the weekly email is off. Requires an administrator to allow AI agents to change settings. Returns sent: false when the email could not be sent.', 'utmatra-utm-attribution-and-tracking' ),
+			'description'         => __( 'Sends the weekly UTM campaign report email to the report recipient now, even when the weekly email is off. Requires a user who can manage Utmatra settings to allow AI agents to change settings. Returns sent: false when the email could not be sent.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'additionalProperties' => false,
@@ -107,7 +107,7 @@ class SendTestEmail implements AbilityDefinition {
 	public static function execute( $input = array() ): array {
 		$result = NotificationsService::send_test_email();
 
-		/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
+		/** This action is documented in src/Abilities/LinkAbilities.php */
 		do_action( 'utmatra_ability_executed', 'utmatra/send-test-email', get_current_user_id(), array_keys( (array) $input ) );
 
 		return $result;
