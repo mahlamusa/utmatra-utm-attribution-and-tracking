@@ -24,6 +24,7 @@ defined( 'ABSPATH' ) || exit;
  * 400 Result. Used by LinksService; moved from RestController.
  *
  * @since 1.1.0
+ * @since 1.1.0 Rejects the slug 0, which the redirect can never resolve.
  */
 class LinkValidator {
 
@@ -49,19 +50,21 @@ class LinkValidator {
 	 * The slug for a new link.
 	 *
 	 * Derived from the label when no explicit `id` is given. Fails when the
-	 * slug is empty or reserved (`incoming`, `visit`, `order` and `lead`
-	 * name event kinds in the events table). Whether the slug is free is
-	 * the caller's check.
+	 * slug is empty, `0` (the redirect handler treats it as no slug, so the
+	 * link would never redirect or record a click) or reserved (`incoming`,
+	 * `visit`, `order` and `lead` name event kinds in the events table).
+	 * Whether the slug is free is the caller's check.
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Caps the slug at 64 characters, the click column width,
 	 *              suffixing a derived slug that collides with a different
 	 *              label after the cut.
 	 * @since 1.1.0 Moved from RestController::create_link().
+	 * @since 1.1.0 Rejects the slug 0.
 	 *
 	 * @param array<string, mixed> $input Link input with `id` and `label`.
 	 *
-	 * @return string|Result The slug, or a 400 error.
+	 * @return string|Result The slug, or a 400 `utmatra_invalid_slug` error.
 	 */
 	public static function slug( array $input ) {
 		$label    = sanitize_text_field( InputValue::string( $input, 'label' ) );
@@ -91,7 +94,7 @@ class LinkValidator {
 			}
 		}
 
-		if ( '' === $id || in_array( $id, self::RESERVED_SLUGS, true ) ) {
+		if ( '' === $id || '0' === $id || in_array( $id, self::RESERVED_SLUGS, true ) ) {
 			return Result::error(
 				'utmatra_invalid_slug',
 				__( 'Please provide a valid link slug (incoming, visit, order and lead are reserved).', 'utmatra-utm-attribution-and-tracking' ),
