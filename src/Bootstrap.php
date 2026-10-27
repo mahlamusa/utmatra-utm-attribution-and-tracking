@@ -10,6 +10,7 @@
  * @since 1.1.0 Loads the capabilities, service support and abilities classes.
  * @since 1.1.0 Loads the stats service and controller.
  * @since 1.1.0 Loads the events service, controller and schema.
+ * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
  *
  * @package Utmatra
  */
@@ -25,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Loads the capabilities, service support and abilities classes.
  * @since 1.1.0 Loads the stats service and controller.
  * @since 1.1.0 Loads the events service, controller and schema.
+ * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
  */
 class Bootstrap {
 
@@ -38,6 +40,7 @@ class Bootstrap {
 	 * @since 1.1.0 Loads the capabilities, service support and abilities classes.
 	 * @since 1.1.0 Loads the stats service and controller.
 	 * @since 1.1.0 Loads the events service, controller and schema.
+	 * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -76,6 +79,14 @@ class Bootstrap {
 		require_once $base . 'Services/Support/Result.php';
 		require_once $base . 'Services/Support/ResultAdapter.php';
 		require_once $base . 'Services/Support/DateRange.php';
+		require_once $base . 'Services/Support/InputValue.php';
+		require_once $base . 'Services/Support/UtmNormalizer.php';
+		require_once $base . 'Services/LinkValidator.php';
+		require_once $base . 'Services/PresetsService.php';
+		require_once $base . 'Services/LinksService.php';
+		require_once $base . 'Rest/Controllers/RequestInput.php';
+		require_once $base . 'Rest/Controllers/LinksController.php';
+		require_once $base . 'Rest/Controllers/PresetsController.php';
 		require_once $base . 'Services/SettingsService.php';
 		require_once $base . 'Rest/Controllers/SettingsController.php';
 		require_once $base . 'Services/StatsBreakdowns.php';
@@ -87,6 +98,7 @@ class Bootstrap {
 		require_once $base . 'Abilities/EventSchema.php';
 		require_once $base . 'Abilities/OptIn.php';
 		require_once $base . 'Abilities/SettingsSchema.php';
+		require_once $base . 'Abilities/LinkAbilities.php';
 		require_once $base . 'Abilities/AbilitiesRegistrar.php';
 		require_once $base . 'Plugin.php';
 	}
