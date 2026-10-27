@@ -1,4 +1,11 @@
 <?php
+/**
+ * Unit tests for PresetsService.
+ *
+ * @since 1.1.0
+ *
+ * @package Utmatra\Tests
+ */
 
 use Utmatra\Services\PresetsService;
 

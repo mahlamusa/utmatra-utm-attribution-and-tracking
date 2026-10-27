@@ -78,11 +78,12 @@ class PresetsService {
 	 * explicit, low-stakes admin action, not data with history worth
 	 * preserving.
 	 *
-	 * A preset stored under an older id for the same name is replaced on save.
+	 * A preset stored under an older id whose name maps to the same id is
+	 * replaced on save.
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::create_preset(); takes an input array and returns a Result.
-	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a preset stored under an older id for the same name.
+	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a preset stored under an older id whose name maps to the same id.
 	 *
 	 * @param array<string, mixed> $input Keys `name`, `utm_source`, `utm_medium`, `utm_term`, `utm_content`.
 	 *
