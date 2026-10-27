@@ -460,6 +460,43 @@ function wp_parse_url( $url, $component = -1 ) {
 }
 
 /**
+ * Stub of wp_parse_str(); parse_str() without the filter.
+ *
+ * @since 1.1.0
+ *
+ * @param string $input_string Query string.
+ * @param array  $result       Receives the parsed variables.
+ *
+ * @return void
+ */
+function wp_parse_str( $input_string, &$result ) {
+	parse_str( (string) $input_string, $result );
+}
+
+/**
+ * Stub of remove_query_arg() for one key; drops that argument from the
+ * query string and keeps the fragment.
+ *
+ * @since 1.1.0
+ *
+ * @param string $key   Query argument name.
+ * @param string $query URL.
+ *
+ * @return string
+ */
+function remove_query_arg( $key, $query ) {
+	$fragment = '';
+	if ( false !== strpos( $query, '#' ) ) {
+		list( $query, $fragment ) = explode( '#', $query, 2 );
+		$fragment                 = '#' . $fragment;
+	}
+	list( $base, $args ) = array_pad( explode( '?', $query, 2 ), 2, '' );
+	wp_parse_str( $args, $parsed );
+	unset( $parsed[ $key ] );
+	return $base . ( $parsed ? '?' . http_build_query( $parsed ) : '' ) . $fragment;
+}
+
+/**
  * Stub of sanitize_text_field(); strips tags and trims.
  *
  * @since 1.1.0
