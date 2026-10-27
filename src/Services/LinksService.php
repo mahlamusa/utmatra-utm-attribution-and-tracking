@@ -132,7 +132,7 @@ class LinksService {
 	 * @since 1.0.0
 	 * @since 1.0.0 Keeps stored values for custom parameters no longer configured.
 	 * @since 1.1.0 Moved from RestController::update_link(); takes the id and an input array and returns a Result.
-	 * @since 1.1.0 Runs under the links option lock.
+	 * @since 1.1.0 Saves under the links option lock; the click count is read after the lock is released.
 	 *
 	 * @param string               $id    Link slug.
 	 * @param array<string, mixed> $input Keys `label`, `destination`, the six UTM fields and `custom`.
@@ -140,11 +140,11 @@ class LinksService {
 	 * @return Result The formatted link (200), a 404 error for an unknown slug, a 400 error for an invalid destination or a 503 error when the lock times out.
 	 */
 	public static function update( string $id, array $input ): Result {
-		return OptionLock::run(
+		global $wpdb;
+
+		$saved = OptionLock::run(
 			LinkManager::OPTION_KEY,
 			static function () use ( $id, $input ): Result {
-				global $wpdb;
-
 				$stored = LinkManager::get( $id );
 				if ( null === $stored ) {
 					return self::not_found();
@@ -168,16 +168,21 @@ class LinksService {
 
 				LinkManager::save( $id, $link );
 
-				$table = esc_sql( Schema::table() );
-				// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-				$clicks = (int) $wpdb->get_var(
-					$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE link_id = %s", $id )
-				);
-				// phpcs:enable
-
-				return Result::ok( self::format( $id, $link, $clicks ) );
+				return Result::ok( $link );
 			}
 		);
+		if ( $saved->is_error() ) {
+			return $saved;
+		}
+
+		$table = esc_sql( Schema::table() );
+		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
+		$clicks = (int) $wpdb->get_var(
+			$wpdb->prepare( "SELECT COUNT(*) FROM {$table} WHERE link_id = %s", $id )
+		);
+		// phpcs:enable
+
+		return Result::ok( self::format( $id, $saved->data(), $clicks ) );
 	}
 
 	/**

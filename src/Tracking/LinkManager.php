@@ -154,7 +154,12 @@ class LinkManager {
 	/**
 	 * Save a new or updated link.
 	 *
+	 * Reads and writes the whole links option, so callers hold
+	 * OptionLock on OPTION_KEY (LinksService does) to keep parallel
+	 * writes from losing changes.
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Documents that callers hold the links option lock.
 	 * @param string                $id   Link slug.
 	 * @param array<string, string> $data Link fields.
 	 * @return void
@@ -168,7 +173,12 @@ class LinkManager {
 	/**
 	 * Delete a managed link by slug.
 	 *
+	 * Reads and writes the whole links option, so callers hold
+	 * OptionLock on OPTION_KEY (LinksService does) to keep parallel
+	 * writes from losing changes.
+	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Documents that callers hold the links option lock.
 	 * @param string $id Link slug.
 	 * @return void
 	 */
