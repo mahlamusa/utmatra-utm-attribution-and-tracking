@@ -316,6 +316,31 @@ if ( ! function_exists( 'sanitize_key' ) ) {
 	}
 }
 
+if ( ! function_exists( 'sanitize_title' ) ) {
+	/**
+	 * Stub of sanitize_title(): lowercases, percent-encodes non-ASCII bytes
+	 * the way utf8_uri_encode() does and dashes everything else.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $title Title.
+	 *
+	 * @return string
+	 */
+	function sanitize_title( $title ) {
+		$title = strtolower( trim( (string) $title ) );
+		$title = (string) preg_replace_callback(
+			'/[\x80-\xff]/',
+			static function ( $byte ) {
+				return '%' . bin2hex( $byte[0] );
+			},
+			$title
+		);
+		$title = (string) preg_replace( '/[^%a-z0-9_\-]+/', '-', $title );
+		return trim( $title, '-' );
+	}
+}
+
 if ( ! class_exists( 'WP_REST_Request' ) ) {
 	/**
 	 * Minimal WP_REST_Request: parameters and headers.

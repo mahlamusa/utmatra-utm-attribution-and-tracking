@@ -78,8 +78,12 @@ class PresetsService {
 	 * explicit, low-stakes admin action, not data with history worth
 	 * preserving.
 	 *
+	 * A preset stored under an older id whose name maps to the same id is
+	 * replaced on save.
+	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::create_preset(); takes an input array and returns a Result.
+	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a preset stored under an older id whose name maps to the same id.
 	 *
 	 * @param array<string, mixed> $input Keys `name`, `utm_source`, `utm_medium`, `utm_term`, `utm_content`.
 	 *
@@ -87,7 +91,7 @@ class PresetsService {
 	 */
 	public static function create( array $input ): Result {
 		$name = sanitize_text_field( InputValue::string( $input, 'name' ) );
-		$id   = sanitize_title( $name );
+		$id   = self::id_for( $name );
 
 		if ( '' === $id ) {
 			return Result::error(
@@ -102,11 +106,32 @@ class PresetsService {
 			$preset[ $key ] = UtmNormalizer::normalize( sanitize_text_field( InputValue::string( $input, $key ) ) );
 		}
 
-		$presets        = (array) get_option( self::OPTION, array() );
+		$presets = (array) get_option( self::OPTION, array() );
+		foreach ( $presets as $key => $stored ) {
+			if ( (string) $key !== $id && is_array( $stored ) && self::id_for( (string) ( $stored['name'] ?? '' ) ) === $id ) {
+				unset( $presets[ $key ] );
+			}
+		}
 		$presets[ $id ] = $preset;
 		update_option( self::OPTION, $presets );
 
 		return Result::ok( array_merge( array( 'id' => $id ), $preset ), 201 );
+	}
+
+	/**
+	 * Derive a preset id from its name.
+	 *
+	 * Limited to `[a-z0-9_-]` so the delete route and ability can reach it:
+	 * sanitize_title() alone percent-encodes non-ASCII names.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $name Preset name.
+	 *
+	 * @return string The preset id, or an empty string when the name has no usable characters.
+	 */
+	private static function id_for( string $name ): string {
+		return sanitize_key( sanitize_title( $name ) );
 	}
 
 	/**

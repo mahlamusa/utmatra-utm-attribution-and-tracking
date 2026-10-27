@@ -23,6 +23,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
 - The REST handlers were refactored into a service layer shared with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
 
+### Fixed
+
+- UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. Their id is limited to lowercase letters, digits, dashes and underscores. A preset saved before 1.1.0 with such a name cannot be deleted from the dashboard; save it again under the same name and the new entry replaces the old one.
+
 ### Security
 
 - The webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
