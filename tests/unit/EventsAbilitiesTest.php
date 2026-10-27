@@ -11,6 +11,7 @@ use Utmatra\Abilities\AbilitiesRegistrar;
 use Utmatra\Abilities\Definitions\ExportEvents;
 use Utmatra\Abilities\Definitions\ListEvents;
 use Utmatra\Capabilities;
+use Utmatra\Tracking\TrafficSource;
 
 require_once dirname( __DIR__, 2 ) . '/src/Abilities/Definitions/ListEvents.php';
 require_once dirname( __DIR__, 2 ) . '/src/Abilities/Definitions/ExportEvents.php';
@@ -46,6 +47,12 @@ return array(
 		utmatra_assert_same( array( 'click', 'visit', 'order', 'lead' ), $properties['kind']['enum'] );
 		utmatra_assert_same( 'uuid', $properties['visitor_id']['format'] );
 		utmatra_assert_same( 30, $properties['period']['default'] );
+	},
+
+	'list events channel enum lists every channel slug' => static function () {
+		$channel = ( new ListEvents() )->args()['input_schema']['properties']['channel'];
+		utmatra_assert_same( array_merge( array( '' ), TrafficSource::CHANNELS ), $channel['enum'] );
+		utmatra_assert_same( '', $channel['default'] );
 	},
 
 	'list events output equals the service output'      => static function () {
