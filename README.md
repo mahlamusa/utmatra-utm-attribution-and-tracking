@@ -27,6 +27,7 @@ Self-hosted UTM and campaign tracking for WordPress: short links, QR codes, firs
 - WooCommerce revenue attribution, with first/last touch on every paid order.
 - Customer journeys: every tagged visit that led to an order or form lead.
 - CSV export, a weekly email summary and a read-only REST API (`utmatra/v1`).
+- WordPress Abilities for AI agents, usable through the Abilities API or the WordPress MCP Adapter (see below).
 - Tracking Doctor diagnostics for caching, consent, cookies, form coverage and WooCommerce attribution.
 
 **Forms and integrations**
@@ -37,6 +38,43 @@ Self-hosted UTM and campaign tracking for WordPress: short links, QR codes, firs
 - IP addresses stored only as salted SHA-256 hashes.
 - Configurable data retention (180 days by default).
 - No outbound requests unless you configure a webhook. Chart.js, the QR library and Action Scheduler are bundled.
+
+## AI agents and WordPress Abilities
+
+Utmatra registers its features with the [WordPress Abilities API](https://developer.wordpress.org/apis/abilities-api/) (core since WordPress 6.9), in the `utmatra` category. AI agents reach them over the `wp-abilities/v1` REST namespace or through the [WordPress MCP Adapter](https://github.com/WordPress/mcp-adapter), which Utmatra does not bundle. Abilities run as the authenticated user, with the same capability checks and sanitising as the dashboard. Core picks the HTTP method of `/wp-abilities/v1/abilities/<id>/run` from the annotations: GET for read abilities and DELETE for `utmatra/update-settings` (destructive and idempotent), both taking `input[...]` query arguments, and POST with a JSON `input` for the rest.
+
+| Ability | Capability | Read-only | Destructive | MCP public |
+| --- | --- | --- | --- | --- |
+| `utmatra/get-stats` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/list-links` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/list-events` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/list-journeys` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/get-journey` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/export-events` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/get-diagnostics` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/get-settings` | `utmatra_view_reports` | yes | no | yes |
+| `utmatra/create-link` | `utmatra_manage_links` | no | no | no |
+| `utmatra/update-link` | `utmatra_manage_links` | no | no | no |
+| `utmatra/delete-link` | `utmatra_manage_links` | no | yes | no |
+| `utmatra/create-preset` | `utmatra_manage_links` | no | no | no |
+| `utmatra/delete-preset` | `utmatra_manage_links` | no | yes | no |
+| `utmatra/update-settings` | `utmatra_manage_settings` + opt-in | no | yes | no |
+| `utmatra/send-test-email` | `utmatra_manage_settings` + opt-in | no | no | no |
+| `utmatra/send-test-webhook` | `utmatra_manage_settings` + opt-in | no | no | no |
+
+| Capability | Grants |
+| --- | --- |
+| `utmatra_view_reports` | The dashboard, the admin Dashboard widget, every read REST route and every read ability |
+| `utmatra_manage_links` | Create, update and delete links and presets (implies view) |
+| `utmatra_manage_settings` | Save settings, send the test email and test webhook (implies view) |
+
+Administrators get all three on activation and upgrade. Grant them to other roles with a role editor, or remap them with the `utmatra_capability_map` filter. Uninstall removes them from every role.
+
+**MCP.** Only the read abilities carry `meta.mcp.public = true`, so the MCP Adapter's default server lists those and not the write abilities.
+
+**Opt-in.** The three settings abilities fail with HTTP 403 (`utmatra_agent_settings_disabled`) until someone who can manage settings switches on **Allow AI agents to change settings** on the dashboard settings card. The switch can only be saved from the dashboard, never through an ability or an Application Password request; the `utmatra_abilities_allow_settings_writes` filter overrides it.
+
+**Guard rails.** The webhook URL is not writable through `update-settings`; retention set by an agent is 0 or 30 to 3,650 days; `delete-link` and `delete-preset` need `confirm: true`; `export-events` returns at most 2,000 rows with a `truncated` flag; `get-settings` returns only the webhook host and never the secret. Write abilities fire `utmatra_ability_executed` with the ability id, user id and input keys (never the values): link, preset and settings abilities after a successful change, the test email and webhook after every send attempt. Full details are in the AI agents FAQ in [readme.txt](readme.txt).
 
 ## Screenshots
 
@@ -60,7 +98,7 @@ Self-hosted UTM and campaign tracking for WordPress: short links, QR codes, firs
 
 ![Tracking Doctor diagnostics](.wordpress.org/screenshot-6.png)
 
-The full documentation (FAQ, filter reference, REST API reference, external services) is in [readme.txt](readme.txt).
+The full documentation (FAQ including AI agents and abilities, filter reference, REST API reference, external services) is in [readme.txt](readme.txt).
 
 ## Requirements
 

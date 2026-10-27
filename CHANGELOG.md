@@ -4,6 +4,34 @@ All notable changes to Utmatra - UTM Attribution and Tracking are documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] - Unreleased
+
+### Added
+
+- WordPress Abilities for every Utmatra feature: 16 abilities in the `utmatra` category, usable by AI agents through `wp-abilities/v1` or the WordPress MCP Adapter.
+  - Read (`utmatra_view_reports`, public to MCP): `get-stats`, `list-links`, `list-events`, `list-journeys`, `get-journey`, `export-events`, `get-diagnostics`, `get-settings`.
+  - Links and presets (`utmatra_manage_links`): `create-link`, `update-link`, `delete-link`, `create-preset`, `delete-preset`.
+  - Settings (`utmatra_manage_settings` plus opt-in): `update-settings`, `send-test-email`, `send-test-webhook`.
+- Three capabilities, `utmatra_view_reports`, `utmatra_manage_links` and `utmatra_manage_settings` (each manage capability implies view), granted to administrators on activation and upgrade and removed from every role on uninstall.
+- `utmatra_capability_map` filter to remap a Utmatra capability to another capability.
+- "Allow AI agents to change settings" switch on the dashboard settings card (option `utmatra_allow_agent_settings`, off by default), required for the settings, test email and test webhook abilities. The `utmatra_abilities_allow_settings_writes` filter overrides it.
+- Guard rails for agents: the webhook URL cannot be changed through an ability; retention set through an ability is 0 or 30 to 3,650 days; `delete-link` and `delete-preset` require `confirm: true`; `export-events` returns at most 2,000 rows with `returned`, `total_rows` and `truncated`; the descriptions of read abilities that return visitor-recorded data mark it as untrusted.
+- `utmatra_ability_executed` action, fired after a write ability runs with the ability id, user id and input keys (never the values): after a successful change for links, presets and settings, after every send attempt for the test email and test webhook.
+
+### Changed
+
+- The dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
+- The REST handlers were refactored into a service layer shared with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
+
+### Security
+
+- The webhook URL and signing secret are no longer sent to the dashboard for users who cannot manage settings.
+- `allow_agent_settings` can only be saved from the dashboard (a request with a valid `wp_rest` nonce), so an ability or an Application Password request cannot switch on agent settings access.
+
+### Upgrade notes
+
+- Custom roles that are not administrator but hold `manage_options` lose access to the Utmatra screens and REST routes unless they are granted one of the new capabilities (or the capability is remapped with `utmatra_capability_map`).
+
 ## [1.0.0] - 2026-10-23
 
 ### Added
@@ -24,4 +52,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - IP addresses stored only as salted SHA-256 hashes, and suggested privacy policy text.
 - Background jobs on bundled Action Scheduler, and no external services or CDN calls by default.
 
+[1.1.0]: https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking/releases/tag/v1.1.0
 [1.0.0]: https://github.com/mahlamusa/utmatra-utm-attribution-and-tracking/releases/tag/v1.0.0

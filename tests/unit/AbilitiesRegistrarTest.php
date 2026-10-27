@@ -60,6 +60,8 @@ function utmatra_test_definition( array $args ): AbilityDefinition {
 		/**
 		 * Store the arguments.
 		 *
+		 * @since 1.1.0
+		 *
 		 * @param array<string, mixed> $args Ability arguments.
 		 */
 		public function __construct( array $args ) {
@@ -69,6 +71,8 @@ function utmatra_test_definition( array $args ): AbilityDefinition {
 		/**
 		 * Ability name.
 		 *
+		 * @since 1.1.0
+		 *
 		 * @return string
 		 */
 		public function id(): string {
@@ -77,6 +81,8 @@ function utmatra_test_definition( array $args ): AbilityDefinition {
 
 		/**
 		 * Ability arguments.
+		 *
+		 * @since 1.1.0
 		 *
 		 * @return array<string, mixed>
 		 */

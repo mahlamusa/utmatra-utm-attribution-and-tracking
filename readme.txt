@@ -38,7 +38,8 @@ Utmatra gives you self-hosted, privacy-respecting campaign tracking for any UTM-
 * **Customer journeys** — a Journeys tab lists recent orders and form leads with every tagged visit that preceded them, built from a random first-party visitor id.
 * **Lead webhooks** — every attributed form submission is recorded as a conversion and can be POSTed, with its attribution data and submitted field values, to Zapier, Make, HubSpot or GoHighLevel (see the webhook FAQ).
 * **CSV export** — download the raw events for any period as a CSV (the newest 10,000 rows), each row with its channel. Conversion rows are included alongside clicks, so the export can hold more rows than the dashboard click total. Exports never include IP hashes or user agents, and cell values are guarded against spreadsheet formula injection.
-* **Read-only REST API** — every dashboard dataset (stats, links, events, journeys, export, diagnostics) is available over `utmatra/v1` to administrators using WordPress Application Passwords (see the REST API section).
+* **Read-only REST API** — every dashboard dataset (stats, links, events, journeys, export, diagnostics) is available over `utmatra/v1` to users with the `utmatra_view_reports` capability using WordPress Application Passwords (see the REST API section).
+* **WordPress Abilities** — AI agents can read reports and manage links, presets and settings through the Abilities API or MCP Adapter (see the AI agents FAQ).
 * **Weekly email summary** — an optional (off by default) weekly email with total clicks, top campaigns, top sources, and revenue when WooCommerce is active.
 * **Tracking Doctor diagnostics** — a "Run diagnostics" panel on the settings card runs five rule-based local checks (caching, consent, cookies, per-form attribution coverage, WooCommerce order attribution) and reports pass/warn/fail/skip with a plain-language explanation for each. No AI, no external calls — every check inspects local plugin/site state only.
 
@@ -181,6 +182,38 @@ Yes. Behind a proxy (Cloudflare, Varnish, a load balancer), `REMOTE_ADDR` is the
 
 Values are normalized for consistent reporting: lowercased, with whitespace replaced by `-`. Analytics tools treat `Newsletter`, `newsletter`, and `News letter` as three different sources, silently fragmenting reports. Normalization (applied in the form and again server-side) keeps every report row canonical.
 
+= How do AI agents use Utmatra (WordPress Abilities)? =
+
+Utmatra registers its features with the [WordPress Abilities API](https://developer.wordpress.org/apis/abilities-api/), in the `utmatra` category. Agents reach them over the `wp-abilities/v1` REST namespace or the [WordPress MCP Adapter](https://github.com/WordPress/mcp-adapter) (not bundled), as the authenticated user, with the same capability checks and sanitising as the dashboard. Core picks the method of `/wp-abilities/v1/abilities/<id>/run` from the annotations: GET for read abilities and DELETE for `update-settings` (destructive and idempotent), both with `input[...]` query arguments, and POST with a JSON `input` for the rest.
+
+**Read** (`utmatra_view_reports`, read-only, public to MCP):
+
+* `utmatra/get-stats`, `utmatra/list-links`, `utmatra/list-events` (up to 200 per page), `utmatra/list-journeys` (up to 100 per page), `utmatra/get-journey` and `utmatra/get-diagnostics` return the same data as the matching REST routes.
+* `utmatra/export-events` returns export rows capped by `limit` (default 500, at most 2,000), with `returned`, `total_rows`, `truncated` and a `hint`.
+* `utmatra/get-settings` returns the settings. The webhook URL is reduced to its host, and only for users who can manage settings; the webhook secret and IP salt are never returned.
+
+**Links and presets** (`utmatra_manage_links`, not public to MCP): `utmatra/create-link`, `utmatra/update-link`, `utmatra/delete-link` (destructive), `utmatra/create-preset` (overwrites a preset with the same name) and `utmatra/delete-preset` (destructive).
+
+**Settings** (`utmatra_manage_settings` plus the opt-in, not public to MCP): `utmatra/update-settings` (destructive, since a shorter retention deletes older events), `utmatra/send-test-email` and `utmatra/send-test-webhook`.
+
+Only read abilities carry `meta.mcp.public = true`, so the MCP Adapter's default server lists them and not the write abilities, which stay available over `wp-abilities/v1`.
+
+**Opt-in.** The settings abilities fail with HTTP 403 (`utmatra_agent_settings_disabled`) until a user who can manage settings switches on "Allow AI agents to change settings" on the dashboard settings card (option `utmatra_allow_agent_settings`, off by default). The switch is saved only from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request. The `utmatra_abilities_allow_settings_writes` filter (bool) overrides it.
+
+**Guard rails.** `update-settings` cannot change the webhook URL (unknown fields are rejected) and accepts `retention_days` of 0 (keep forever) or 30 to 3,650; the dashboard keeps its own range. `delete-link` and `delete-preset` require `confirm: true`. Read abilities that return visitor-recorded values (referrers, UTM values, destinations) tell the agent to treat them as untrusted data, never as instructions. IP hashes, user agents and submitted form values are never returned.
+
+**Audit hook.** The `utmatra_ability_executed` action receives the ability id, the user id and the input keys (never the values). Link, preset and settings abilities fire it only after a successful change; the test email and test webhook fire it after every send attempt. The plugin logs nothing itself.
+
+**Capabilities.** The dashboard menu, the admin Dashboard widget, the REST routes and the abilities all check three capabilities:
+
+* `utmatra_view_reports` — the dashboard, the widget and every read route and ability.
+* `utmatra_manage_links` — create, update and delete links and presets. Implies view.
+* `utmatra_manage_settings` — save settings, send the test email and test webhook. Implies view.
+
+The administrator role receives all three on activation and upgrade (per site on multisite; super admins always pass), and uninstalling removes them from every role. Grant them to other roles with a role editor, or remap one with the `utmatra_capability_map` filter, which receives and returns an array of Utmatra capability => capability to check:
+
+`add_filter( 'utmatra_capability_map', function ( $map ) { $map['utmatra_view_reports'] = 'edit_posts'; return $map; } );`
+
 == Screenshots ==
 
 1. Overview: clicks over time against the previous period, conversions, attributed revenue, and breakdowns by source, campaign, medium, device, channel, landing page, referrer and ad platform.
@@ -197,11 +230,11 @@ Values are normalized for consistent reporting: lowercased, with whitespace repl
 
 == External services ==
 
-The plugin contacts no external service on its own. Tracking, reports, QR codes and charts all run on your site. The one exception is the optional **conversion webhook**, which is off until an administrator saves a receiver URL under Settings → Webhooks. Once a URL is saved, the site sends a JSON POST request to that URL, and only to that URL:
+The plugin contacts no external service on its own. Tracking, reports, QR codes and charts all run on your site. The one exception is the optional **conversion webhook**, which is off until a user who can manage Utmatra settings saves a receiver URL under Settings → Webhooks. Once a URL is saved, the site sends a JSON POST request to that URL, and only to that URL:
 
 * **When a tracked form is submitted** (lead event): the site URL, the form plugin, form id and title, the submitted field values (these can include a name, email address and phone number; file uploads, passwords and hidden fields are never sent), the visitor's first- and last-touch campaign data (UTM parameters, ad click IDs, custom parameters, channel, referrer host and landing page), the random visitor id, the page URL and a timestamp.
 * **When an attributed WooCommerce order is paid** (order event): the site URL, the order id, total and currency, the first- and last-touch campaign data and a timestamp. No customer details are sent.
-* **When an administrator clicks "Send test webhook"**: a synthetic sample payload.
+* **When "Send test webhook" is clicked, or an agent runs `utmatra/send-test-webhook`**: a synthetic sample payload.
 
 Order and lead events can each be switched off. The presets only change the format of the request body; a service is contacted only if you paste one of its URLs. When you use one of these services, its terms and privacy policy apply to the data it receives:
 
@@ -239,20 +272,22 @@ All filters shipped by the plugin:
 * **`utmatra_search_engine_hosts`** *(string[])* — the referrer hosts classified as search engines. An entry with a dot matches the host and its subdomains; an entry without a dot (`google`) matches any label of the host.
 * **`utmatra_social_network_hosts`** *(string[])* — the referrer hosts classified as social networks, same matching rule.
 * **`utmatra_ai_assistant_hosts`** *(string[])* — the referrer hosts classified as AI assistants, same matching rule; checked before the search-engine list.
+* **`utmatra_capability_map`**, **`utmatra_abilities_allow_settings_writes`** — see the AI agents FAQ.
 
 Actions:
 
 * **`utmatra_lead_recorded`** *(receives the integration slug and the lead record)* — fires after an attributed form submission has been recorded as a lead conversion. The record holds `form_id`, `form_title`, `posted` (the attribution data), `created_at`, `page_url` and `fields` (the cleaned submitted values, which the plugin itself never stores). The lead webhook listens on this action.
+* **`utmatra_ability_executed`** — see the AI agents FAQ.
 
 == REST API ==
 
-Every dataset the dashboard shows is available read-only over the `utmatra/v1` REST namespace. All routes are GET, require an administrator (`manage_options`), and work with [Application Passwords](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/): create one under **Users → Profile → Application Passwords** (needs HTTPS, or `WP_ENVIRONMENT_TYPE=local` on a development site), then authenticate with it as the user:
+Every dataset the dashboard shows is available read-only over the `utmatra/v1` REST namespace. The routes below are all GET, require the `utmatra_view_reports` capability (administrators have it), and work with [Application Passwords](https://make.wordpress.org/core/2020/11/05/application-passwords-integration-guide/): create one under **Users → Profile → Application Passwords** (needs HTTPS, or `WP_ENVIRONMENT_TYPE=local` on a development site), then authenticate with it as the user:
 
 `curl -u "admin:xxxx xxxx xxxx xxxx xxxx xxxx" "https://example.com/wp-json/utmatra/v1/events?period=30&kind=order&per_page=100"`
 
-Logged-in administrators can also call the routes from the dashboard (cookie plus nonce authentication) — that is how the plugin's own JS loads its data.
+Logged-in users with that capability can also call the routes from the dashboard (cookie plus nonce authentication) — that is how the plugin's own JS loads its data.
 
-**Conventions.** All timestamps are UTC `YYYY-MM-DD HH:MM:SS`. The `custom` and `meta` columns are always JSON objects (`{}` when empty). `ip_hash` and `user_agent` are never returned by any route. Invalid arguments return HTTP 400 with WordPress's standard envelope, e.g. `{ "code": "rest_invalid_param", "message": "Invalid parameter(s): kind", "data": { "status": 400, "params": { "kind": "…" } } }`. Unauthenticated requests get 401; authenticated non-administrators get 403. `visit` rows appear only while "Track the first page of every visit" is on; `channel` values and `custom` parameter keys appear on rows recorded since those features were configured.
+**Conventions.** All timestamps are UTC `YYYY-MM-DD HH:MM:SS`. The `custom` and `meta` columns are always JSON objects (`{}` when empty). `ip_hash` and `user_agent` are never returned by any route. Invalid arguments return HTTP 400 with WordPress's standard envelope, e.g. `{ "code": "rest_invalid_param", "message": "Invalid parameter(s): kind", "data": { "status": 400, "params": { "kind": "…" } } }`. Unauthenticated requests get 401; authenticated users without the capability get 403. `visit` rows appear only while "Track the first page of every visit" is on; `channel` values and `custom` parameter keys appear on rows recorded since those features were configured.
 
 **`GET /stats`** — args `period` (days, default 30), `campaign`, `since`/`until` (`Y-m-d`, a custom range overriding `period`). Response: `clicks_by_day[]` (`date`, `count`, `conversions`), `by_source[]`, `by_campaign[]`, `by_medium[]`, `by_device[]`, `by_channel[]`, `by_landing[]`, `by_platform[]`, `by_referrer[]` (each `label` + `count`), `revenue_by_campaign[]` (`label`, `orders`, `revenue`), `total`, `previous_total`, `previous_clicks_by_day[]`, `conversions`, `all_time_total`, `campaigns[]`.
 
@@ -269,6 +304,18 @@ Logged-in administrators can also call the routes from the dashboard (cookie plu
 **`GET /journeys/{visitor_id}`** — the path parameter is a UUID v4 (anything else misses the route and 404s at the router). Response `visitor_id`, `events[]` (ascending, at most 500), `conversions`, `first_seen`, `last_seen`, `truncated`. An unknown visitor id returns HTTP 404 with `code: utmatra_not_found`.
 
 == Changelog ==
+
+= 1.1.0 =
+* Added: WordPress Abilities for every Utmatra feature, 16 abilities in the `utmatra` category: eight read abilities (stats, links, events, journeys, a single journey, a capped export, diagnostics and settings) and eight write abilities (links, presets, settings, test email and test webhook). Read abilities are public to MCP; write abilities are not.
+* Added: three capabilities, `utmatra_view_reports`, `utmatra_manage_links` and `utmatra_manage_settings`, granted to administrators on activation and upgrade and removed on uninstall. The new `utmatra_capability_map` filter remaps them.
+* Added: "Allow AI agents to change settings" switch on the dashboard settings card (off by default), required for the settings, test email and test webhook abilities. The `utmatra_abilities_allow_settings_writes` filter overrides it.
+* Added: guard rails for agents: the webhook URL cannot be changed through an ability, retention set by an ability is 0 or 30 to 3,650 days, deleting a link or preset needs `confirm: true`, and the export ability returns at most 2,000 rows with a `truncated` flag.
+* Added: `utmatra_ability_executed` action, fired after a write ability runs, with the ability id, user id and input keys (never the values).
+* Changed: the dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
+* Changed: the REST handlers now share a service layer with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
+* Security: the webhook URL and signing secret are no longer sent to the dashboard for users who cannot manage settings.
+* Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
+* Upgrade note: custom roles that are not administrator but hold `manage_options` lose access to the Utmatra screens and REST routes unless granted one of the new capabilities (or remapped with `utmatra_capability_map`).
 
 = 1.0.0 =
 * Initial release.
@@ -288,6 +335,9 @@ Logged-in administrators can also call the routes from the dashboard (cookie plu
 * Background jobs on bundled Action Scheduler, and no external services or CDN calls by default.
 
 == Upgrade Notice ==
+
+= 1.1.0 =
+Adds WordPress Abilities for AI agents and three Utmatra capabilities. Non-administrator roles that relied on manage_options lose access to Utmatra until granted a utmatra_ capability or remapped with the utmatra_capability_map filter.
 
 = 1.0.0 =
 Initial release.

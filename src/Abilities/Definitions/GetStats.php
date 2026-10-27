@@ -53,7 +53,9 @@ class GetStats implements AbilityDefinition {
 			'permission_callback' => array( $this, 'permission' ),
 			'meta'                => array(
 				'annotations'  => array(
-					'readonly' => true,
+					'readonly'    => true,
+					'destructive' => false,
+					'idempotent'  => true,
 				),
 				'show_in_rest' => true,
 				'mcp'          => array(
