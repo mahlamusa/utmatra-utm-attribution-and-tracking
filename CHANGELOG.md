@@ -25,7 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Security
 
-- The webhook URL and signing secret are no longer sent to the dashboard for users who cannot manage settings.
+- The webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 - `allow_agent_settings` can only be saved from the dashboard (a request with a valid `wp_rest` nonce), so an ability or an Application Password request cannot switch on agent settings access.
 
 ### Upgrade notes
