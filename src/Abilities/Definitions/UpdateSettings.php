@@ -154,7 +154,7 @@ class UpdateSettings implements AbilityDefinition {
 	 * Execute callback: apply the retention floor, save, return the settings.
 	 *
 	 * Fires `utmatra_ability_executed` with the input keys (never values)
-	 * after a successful save.
+	 * after a successful save. Booleans sent as "false" are saved as false.
 	 *
 	 * @since 1.1.0
 	 *
@@ -163,9 +163,10 @@ class UpdateSettings implements AbilityDefinition {
 	 * @return array<string, mixed>|WP_Error The settings after the save, or the validation error.
 	 */
 	public static function execute( $input = array() ) {
-		// Core validates against the schema first; this keeps the guard
-		// even if the input was changed after validation.
-		$input = array_intersect_key( (array) $input, self::input_schema()['properties'] );
+		// Core validates against the schema first, but older run controllers
+		// pass query string values such as "false" through as strings. Coerce
+		// to the schema types, which also drops keys outside the schema.
+		$input = rest_sanitize_value_from_schema( (array) $input, self::input_schema(), 'input' );
 
 		if ( isset( $input['retention_days'] ) && $input['retention_days'] > 0 && $input['retention_days'] < self::MIN_RETENTION_DAYS ) {
 			return new WP_Error(

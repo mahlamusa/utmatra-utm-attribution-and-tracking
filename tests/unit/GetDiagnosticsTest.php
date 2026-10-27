@@ -41,7 +41,7 @@ return array(
 		$schema = ( new GetDiagnostics() )->args()['input_schema'];
 		utmatra_assert_same( 'object', $schema['type'] );
 		utmatra_assert_false( $schema['additionalProperties'] );
-		utmatra_assert_same( array(), $schema['properties'] );
+		utmatra_assert_false( array_key_exists( 'properties', $schema ) );
 	},
 
 	'output schema describes every check field'    => static function () {

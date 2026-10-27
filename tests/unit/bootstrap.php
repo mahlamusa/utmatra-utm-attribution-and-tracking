@@ -793,6 +793,61 @@ function absint( $value ) {
 	return abs( (int) $value );
 }
 
+/**
+ * Stub of rest_sanitize_boolean().
+ *
+ * @since 1.1.0
+ *
+ * @param bool|string $value Value.
+ *
+ * @return bool
+ */
+function rest_sanitize_boolean( $value ) {
+	if ( is_string( $value ) ) {
+		$value = strtolower( $value );
+		if ( in_array( $value, array( 'false', '0' ), true ) ) {
+			$value = false;
+		}
+	}
+
+	return (bool) $value;
+}
+
+/**
+ * Stub of rest_sanitize_value_from_schema(): object, boolean, integer and
+ * string types only.
+ *
+ * @since 1.1.0
+ *
+ * @param mixed                $value Value.
+ * @param array<string, mixed> $args  Schema.
+ * @param string               $param Ignored.
+ *
+ * @return mixed
+ */
+function rest_sanitize_value_from_schema( $value, $args, $param = '' ) {
+	switch ( $args['type'] ?? '' ) {
+		case 'object':
+			$value = (array) $value;
+			foreach ( $value as $property => $v ) {
+				if ( isset( $args['properties'][ $property ] ) ) {
+					$value[ $property ] = rest_sanitize_value_from_schema( $v, $args['properties'][ $property ], $param );
+				} elseif ( isset( $args['additionalProperties'] ) && false === $args['additionalProperties'] ) {
+					unset( $value[ $property ] );
+				}
+			}
+			return $value;
+		case 'boolean':
+			return rest_sanitize_boolean( $value );
+		case 'integer':
+			return (int) $value;
+		case 'string':
+			return (string) $value;
+	}
+
+	return $value;
+}
+
 $utmatra_src = dirname( __DIR__, 2 ) . '/src/';
 require_once $utmatra_src . 'Tracking/Attribution.php';
 require_once $utmatra_src . 'Tracking/Tracker.php';

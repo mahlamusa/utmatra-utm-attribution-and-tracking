@@ -61,4 +61,18 @@ return array(
 			utmatra_assert_true( $class::permission() );
 		}
 	},
+
+	'test email input schema has no empty properties key' => static function () {
+		utmatra_assert_false( array_key_exists( 'properties', ( new SendTestEmail() )->args()['input_schema'] ) );
+	},
+
+	'test webhook leads sent as the string false runs the order test' => static function () {
+		$GLOBALS['utmatra_test']['options'][ ConversionWebhook::OPTION_EVENTS ] = array(
+			'orders' => false,
+			'leads'  => true,
+		);
+
+		utmatra_assert_same( array( 'sent' => false ), SendTestWebhook::execute( array( 'leads' => 'false' ) ) );
+		utmatra_assert_same( 'Enable at least one event to send a test', $GLOBALS['utmatra_test']['options']['utmatra_webhook_last']['detail'] );
+	},
 );

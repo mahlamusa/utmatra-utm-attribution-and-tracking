@@ -14,7 +14,14 @@ use Utmatra\Abilities\Definitions\GetSettings;
 use Utmatra\Abilities\Definitions\UpdateSettings;
 use Utmatra\Abilities\OptIn;
 use Utmatra\Capabilities;
+use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Services\SettingsService;
+
+// The real weekly email schedules through Action Scheduler.
+if ( ! class_exists( WeeklyEmail::class ) ) {
+	require_once __DIR__ . '/fixtures/WeeklyEmailStub.php';
+}
 
 require_once dirname( __DIR__, 2 ) . '/src/Abilities/Definitions/GetSettings.php';
 require_once dirname( __DIR__, 2 ) . '/src/Abilities/Definitions/UpdateSettings.php';
@@ -118,5 +125,43 @@ return array(
 		utmatra_assert_instance_of( WP_Error::class, $error );
 		utmatra_assert_same( 'utmatra_invalid_custom_param', $error->get_error_code() );
 		utmatra_assert_same( array(), $GLOBALS['utmatra_test']['did_actions'] );
+	},
+
+	'get-settings input schema has no empty properties key' => static function () {
+		utmatra_assert_false( array_key_exists( 'properties', ( new GetSettings() )->args()['input_schema'] ) );
+	},
+
+	'update-settings saves booleans sent as strings as false' => static function () {
+		$GLOBALS['utmatra_test']['options'] = array(
+			WeeklyEmail::OPTION    => 1,
+			'utmatra_track_visits' => 1,
+		);
+
+		UpdateSettings::execute(
+			array(
+				'weekly_email' => 'false',
+				'track_visits' => '0',
+			)
+		);
+
+		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['options'][ WeeklyEmail::OPTION ] );
+		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['options']['utmatra_track_visits'] );
+	},
+
+	'update-settings drops the opt-in and webhook url before saving' => static function () {
+		$GLOBALS['utmatra_test']['options'] = array(
+			OptIn::OPTION                 => 1,
+			ConversionWebhook::OPTION_URL => 'https://hooks.example.test/saved',
+		);
+
+		UpdateSettings::execute(
+			array(
+				'allow_agent_settings' => false,
+				'webhook_url'          => 'https://attacker.example.test/',
+			)
+		);
+
+		utmatra_assert_same( 1, $GLOBALS['utmatra_test']['options'][ OptIn::OPTION ] );
+		utmatra_assert_same( 'https://hooks.example.test/saved', $GLOBALS['utmatra_test']['options'][ ConversionWebhook::OPTION_URL ] );
 	},
 );

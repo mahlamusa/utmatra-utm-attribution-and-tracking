@@ -67,23 +67,7 @@ class ExportEvents implements AbilityDefinition {
 		return array(
 			'label'               => __( 'Export events', 'utmatra-utm-attribution-and-tracking' ),
 			'description'         => __( 'Returns the raw rows of the CSV export, newest first, capped at limit (default 500, clamped to 1-2000). truncated is true when more rows match; narrow the date range or page through utmatra/list-events for the rest. IP hashes and user agents are never included.', 'utmatra-utm-attribution-and-tracking' ) . ' ' . EventSchema::untrusted_note(),
-			'input_schema'        => array(
-				'type'                 => 'object',
-				'default'              => array(),
-				'additionalProperties' => false,
-				'properties'           => EventSchema::date_range_properties() + array(
-					'include_visits' => array(
-						'type'        => 'boolean',
-						'description' => __( 'Include untagged landing visits.', 'utmatra-utm-attribution-and-tracking' ),
-						'default'     => false,
-					),
-					'limit'          => array(
-						'type'        => 'integer',
-						'description' => __( 'Maximum number of rows, clamped to 1-2000.', 'utmatra-utm-attribution-and-tracking' ),
-						'default'     => self::DEFAULT_LIMIT,
-					),
-				),
-			),
+			'input_schema'        => $this->input_schema(),
 			'output_schema'       => array(
 				'type'       => 'object',
 				'properties' => array(
@@ -112,7 +96,37 @@ class ExportEvents implements AbilityDefinition {
 	}
 
 	/**
+	 * JSON Schema of the input.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<string, mixed>
+	 */
+	private function input_schema(): array {
+		return array(
+			'type'                 => 'object',
+			'default'              => array(),
+			'additionalProperties' => false,
+			'properties'           => EventSchema::date_range_properties() + array(
+				'include_visits' => array(
+					'type'        => 'boolean',
+					'description' => __( 'Include untagged landing visits.', 'utmatra-utm-attribution-and-tracking' ),
+					'default'     => false,
+				),
+				'limit'          => array(
+					'type'        => 'integer',
+					'description' => __( 'Maximum number of rows, clamped to 1-2000.', 'utmatra-utm-attribution-and-tracking' ),
+					'default'     => self::DEFAULT_LIMIT,
+				),
+			),
+		);
+	}
+
+	/**
 	 * Execute callback.
+	 *
+	 * Coerces the input to the schema types first: older Abilities API run
+	 * controllers pass query string values such as "false" through as strings.
 	 *
 	 * @since 1.1.0
 	 *
@@ -121,7 +135,7 @@ class ExportEvents implements AbilityDefinition {
 	 * @return array<string, mixed>
 	 */
 	public function execute( $input = null ): array {
-		$input  = (array) $input;
+		$input  = rest_sanitize_value_from_schema( (array) $input, $this->input_schema(), 'input' );
 		$limit  = min( self::MAX_LIMIT, max( 1, (int) ( $input['limit'] ?? self::DEFAULT_LIMIT ) ) );
 		$result = EventsService::export_sample( $input, $limit );
 
