@@ -132,6 +132,27 @@ class DateRange {
 	}
 
 	/**
+	 * Build the date range and campaign WHERE clause from raw service input.
+	 *
+	 * Sanitizes `since`, `until` and `campaign`, resolves the reference
+	 * instant and period, then delegates to build_where().
+	 *
+	 * @since 1.1.0 Replaces the copies in EventsService and JourneysService.
+	 *
+	 * @param array<string, mixed> $args Keys: period (default 30), campaign (default empty), since, until.
+	 *
+	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
+	 */
+	public static function where_from_args( array $args ): string {
+		$since     = sanitize_text_field( (string) ( $args['since'] ?? '' ) );
+		$until     = sanitize_text_field( (string) ( $args['until'] ?? '' ) );
+		$now_local = self::resolve_now_local( $until, wp_timezone() );
+		$period    = self::resolve_period( $since, $until, absint( $args['period'] ?? 30 ), $now_local );
+
+		return self::build_where( $period, sanitize_text_field( (string) ( $args['campaign'] ?? '' ) ), $now_local );
+	}
+
+	/**
 	 * Build the prepared WHERE clause for the calendar-day window that lines
 	 * up with the chart's previous-period overlay.
 	 *

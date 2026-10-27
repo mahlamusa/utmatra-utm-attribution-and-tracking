@@ -79,6 +79,7 @@ class RestController {
 	 * @since 1.1.0 The test email and test webhook routes use NotificationsController.
 	 * @since 1.1.0 GET /diagnostics delegates to DiagnosticsController.
 	 * @since 1.1.0 The journeys routes delegate to JourneysController.
+	 * @since 1.1.0 The date-ranged routes share their arguments through date_args().
 	 *
 	 * @return void
 	 */
@@ -90,24 +91,7 @@ class RestController {
 				'methods'             => 'GET',
 				'callback'            => array( StatsController::class, 'get_stats' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
-				'args'                => array(
-					'period'   => array(
-						'default'           => 30,
-						'sanitize_callback' => 'absint',
-					),
-					'campaign' => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'since'    => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'until'    => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-				),
+				'args'                => self::date_args(),
 			)
 		);
 
@@ -162,27 +146,14 @@ class RestController {
 				'methods'             => 'GET',
 				'callback'            => array( EventsController::class, 'export_events' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
-				'args'                => array(
-					'period'         => array(
-						'default'           => 30,
-						'sanitize_callback' => 'absint',
-					),
-					'campaign'       => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'since'          => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'until'          => array(
-						'default'           => '',
-						'sanitize_callback' => 'sanitize_text_field',
-					),
-					'include_visits' => array(
-						'default'           => false,
-						'sanitize_callback' => 'rest_sanitize_boolean',
-					),
+				'args'                => array_merge(
+					self::date_args(),
+					array(
+						'include_visits' => array(
+							'default'           => false,
+							'sanitize_callback' => 'rest_sanitize_boolean',
+						),
+					)
 				),
 			)
 		);
@@ -196,23 +167,8 @@ class RestController {
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array_merge(
 					self::pagination_args(),
+					self::date_args(),
 					array(
-						'period'     => array(
-							'default'           => 30,
-							'sanitize_callback' => 'absint',
-						),
-						'campaign'   => array(
-							'default'           => '',
-							'sanitize_callback' => 'sanitize_text_field',
-						),
-						'since'      => array(
-							'default'           => '',
-							'sanitize_callback' => 'sanitize_text_field',
-						),
-						'until'      => array(
-							'default'           => '',
-							'sanitize_callback' => 'sanitize_text_field',
-						),
 						'channel'    => array(
 							'default'           => '',
 							'sanitize_callback' => 'sanitize_key',
@@ -243,20 +199,7 @@ class RestController {
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array_merge(
 					self::pagination_args(),
-					array(
-						'period' => array(
-							'default'           => 30,
-							'sanitize_callback' => 'absint',
-						),
-						'since'  => array(
-							'default'           => '',
-							'sanitize_callback' => 'sanitize_text_field',
-						),
-						'until'  => array(
-							'default'           => '',
-							'sanitize_callback' => 'sanitize_text_field',
-						),
-					)
+					self::date_args( false )
 				),
 			)
 		);
@@ -445,5 +388,41 @@ class RestController {
 				'sanitize_callback' => 'absint',
 			),
 		);
+	}
+
+	/**
+	 * Shared period/campaign/since/until argument definitions for the date-ranged read routes.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param bool $with_campaign Whether to include the campaign filter (the journeys route has none).
+	 *
+	 * @return array<string, array<string, mixed>>
+	 */
+	private static function date_args( bool $with_campaign = true ): array {
+		$args = array(
+			'period'   => array(
+				'default'           => 30,
+				'sanitize_callback' => 'absint',
+			),
+			'campaign' => array(
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'since'    => array(
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+			'until'    => array(
+				'default'           => '',
+				'sanitize_callback' => 'sanitize_text_field',
+			),
+		);
+
+		if ( ! $with_campaign ) {
+			unset( $args['campaign'] );
+		}
+
+		return $args;
 	}
 }
