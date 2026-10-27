@@ -7,6 +7,7 @@
  * assets/js/dashboard.js through the utmatra/v1 REST routes.
  *
  * @since 1.0.0
+ * @since 1.1.0 Adds the switch that allows AI agents to change settings.
  *
  * @package Utmatra\Admin
  */

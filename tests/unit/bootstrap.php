@@ -334,6 +334,8 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 		/**
 		 * Set a parameter.
 		 *
+		 * @since 1.1.0
+		 *
 		 * @param string $key   Parameter name.
 		 * @param mixed  $value Parameter value.
 		 *
@@ -345,6 +347,8 @@ if ( ! class_exists( 'WP_REST_Request' ) ) {
 
 		/**
 		 * Get a parameter; null when absent.
+		 *
+		 * @since 1.1.0
 		 *
 		 * @param string $key Parameter name.
 		 *
@@ -454,6 +458,8 @@ class WP_Error {
 	/**
 	 * Constructor.
 	 *
+	 * @since 1.1.0
+	 *
 	 * @param string $code    Error code.
 	 * @param string $message Error message.
 	 * @param mixed  $data    Error data.
@@ -467,6 +473,8 @@ class WP_Error {
 	/**
 	 * Error code.
 	 *
+	 * @since 1.1.0
+	 *
 	 * @return string
 	 */
 	public function get_error_code() {
@@ -476,6 +484,8 @@ class WP_Error {
 	/**
 	 * Error message.
 	 *
+	 * @since 1.1.0
+	 *
 	 * @return string
 	 */
 	public function get_error_message() {
@@ -484,6 +494,8 @@ class WP_Error {
 
 	/**
 	 * Error data.
+	 *
+	 * @since 1.1.0
 	 *
 	 * @return mixed
 	 */
@@ -516,6 +528,8 @@ class WP_REST_Response {
 	/**
 	 * Constructor.
 	 *
+	 * @since 1.1.0
+	 *
 	 * @param mixed $data   Response data.
 	 * @param int   $status HTTP status.
 	 */
@@ -527,6 +541,8 @@ class WP_REST_Response {
 	/**
 	 * Response data.
 	 *
+	 * @since 1.1.0
+	 *
 	 * @return mixed
 	 */
 	public function get_data() {
@@ -535,6 +551,8 @@ class WP_REST_Response {
 
 	/**
 	 * HTTP status.
+	 *
+	 * @since 1.1.0
 	 *
 	 * @return int
 	 */
@@ -562,6 +580,8 @@ class Utmatra_Test_Wpdb {
 
 	/**
 	 * Substitute the placeholders.
+	 *
+	 * @since 1.1.0
 	 *
 	 * @param string $query Query with %s / %d placeholders.
 	 * @param mixed  ...$args Values.

@@ -1707,7 +1707,7 @@
 	// Inconsistent case/spaces silently fragment reports ("My Newsletter" vs
 	// "my-newsletter"), so utm_* values are normalized on blur and on submit.
 	// The server applies the same normalization authoritatively — keep in
-	// sync with RestController::normalize_utm().
+	// sync with UtmNormalizer::normalize().
 	const UTM_FIELDS = [ 'utm_source', 'utm_medium', 'utm_campaign', 'utm_id', 'utm_term', 'utm_content' ];
 
 	function normalizeUtm( value ) {

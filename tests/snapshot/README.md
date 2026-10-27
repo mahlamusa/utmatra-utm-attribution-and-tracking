@@ -28,11 +28,11 @@ export ECHOWP=/path/to/echowp
 git worktree add --detach /tmp/utmatra-main origin/main
 ln -s "$PWD/vendor" /tmp/utmatra-main/vendor   # or composer install there
 
-tests/snapshot/snapshot.sh run issue-18 /tmp/utmatra-main /tmp/snap-main
-tests/snapshot/snapshot.sh run issue-18 "$PWD"            /tmp/snap-branch
+tests/snapshot/snapshot.sh run refactor-check /tmp/utmatra-main /tmp/snap-main
+tests/snapshot/snapshot.sh run refactor-check "$PWD"            /tmp/snap-branch
 tests/snapshot/snapshot.sh compare /tmp/snap-main /tmp/snap-branch
 
-tests/snapshot/snapshot.sh down issue-18
+tests/snapshot/snapshot.sh down refactor-check
 git worktree remove /tmp/utmatra-main
 ```
 
