@@ -121,7 +121,7 @@ class GetStats implements AbilityDefinition {
 					'minimum'     => 1,
 					'maximum'     => 365,
 					'default'     => 30,
-					'description' => __( 'Number of days to report on, ending today (or on `until`). Ignored when both `since` and `until` are set.', 'utmatra-utm-attribution-and-tracking' ),
+					'description' => __( 'Number of days to report on, ending today (or on `until`). Ignored when `since` and `until` form a valid range.', 'utmatra-utm-attribution-and-tracking' ),
 				),
 				'campaign' => array(
 					'type'        => 'string',

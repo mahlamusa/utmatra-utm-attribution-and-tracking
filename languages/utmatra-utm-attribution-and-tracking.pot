@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T08:08:45+00:00\n"
+"POT-Creation-Date: 2026-10-27T08:08:49+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utmatra-utm-attribution-and-tracking\n"
@@ -60,7 +60,7 @@ msgid "Aggregated attribution stats for a period: clicks and conversions per day
 msgstr ""
 
 #: src/Abilities/Definitions/GetStats.php:124
-msgid "Number of days to report on, ending today (or on `until`). Ignored when both `since` and `until` are set."
+msgid "Number of days to report on, ending today (or on `until`). Ignored when `since` and `until` form a valid range."
 msgstr ""
 
 #: src/Abilities/Definitions/GetStats.php:129
