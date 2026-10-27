@@ -148,6 +148,24 @@ return array(
 		utmatra_assert_true( $GLOBALS['utmatra_test']['roles']['administrator'][ Capabilities::VIEW_REPORTS ] ?? false );
 	},
 
+	'register refreshes a logged-in user\'s caps'  => static function () {
+		$GLOBALS['utmatra_test']['logged_in'] = true;
+		Capabilities::register();
+		utmatra_assert_same( 1, $GLOBALS['utmatra_test']['role_caps_refreshed'] );
+	},
+
+	'register skips the refresh when logged out'   => static function () {
+		Capabilities::register();
+		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['role_caps_refreshed'] );
+	},
+
+	'maybe upgrade skips the refresh once granted' => static function () {
+		$GLOBALS['utmatra_test']['logged_in']                               = true;
+		$GLOBALS['utmatra_test']['options'][ Capabilities::VERSION_OPTION ] = '1.1.0';
+		Capabilities::maybe_upgrade();
+		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['role_caps_refreshed'] );
+	},
+
 	'register without an administrator role retries later' => static function () {
 		unset( $GLOBALS['utmatra_test']['roles']['administrator'] );
 		Capabilities::register();
