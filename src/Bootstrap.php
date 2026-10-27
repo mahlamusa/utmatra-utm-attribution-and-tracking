@@ -70,8 +70,11 @@ class Bootstrap {
 		require_once $base . 'Services/Support/Result.php';
 		require_once $base . 'Services/Support/ResultAdapter.php';
 		require_once $base . 'Services/Support/DateRange.php';
+		require_once $base . 'Services/SettingsService.php';
+		require_once $base . 'Rest/Controllers/SettingsController.php';
 		require_once $base . 'Abilities/AbilityDefinition.php';
 		require_once $base . 'Abilities/OptIn.php';
+		require_once $base . 'Abilities/SettingsSchema.php';
 		require_once $base . 'Abilities/AbilitiesRegistrar.php';
 		require_once $base . 'Plugin.php';
 	}

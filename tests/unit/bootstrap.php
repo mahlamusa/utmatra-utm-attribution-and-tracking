@@ -29,6 +29,7 @@ function utmatra_test_reset(): void {
 		'categories' => array(),
 		'abilities'  => array(),
 		'routes'     => array(),
+		'did_actions' => array(),
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -298,6 +299,73 @@ function wp_register_ability( $name, $args ) {
 }
 
 /**
+ * Stub of wp_parse_url(); parse_url() without the PHP < 5.4.7 fixes.
+ *
+ * @since 1.1.0
+ *
+ * @param string $url       URL.
+ * @param int    $component Component, or -1 for all.
+ *
+ * @return mixed
+ */
+function wp_parse_url( $url, $component = -1 ) {
+	return parse_url( $url, $component ); // phpcs:ignore WordPress.WP.AlternativeFunctions.parse_url_parse_url
+}
+
+/**
+ * Stub of sanitize_text_field(); strips tags and trims.
+ *
+ * @since 1.1.0
+ *
+ * @param string $value Value.
+ *
+ * @return string
+ */
+function sanitize_text_field( $value ) {
+	return trim( strip_tags( (string) $value ) ); // phpcs:ignore WordPress.WP.AlternativeFunctions.strip_tags_strip_tags
+}
+
+/**
+ * Stub of do_action(); records each call's arguments under `did_actions`.
+ *
+ * @since 1.1.0
+ *
+ * @param string $hook    Hook name.
+ * @param mixed  ...$args Arguments.
+ *
+ * @return void
+ */
+function do_action( $hook, ...$args ) {
+	$GLOBALS['utmatra_test']['did_actions'][ $hook ][] = $args;
+}
+
+/**
+ * Stub of get_current_user_id().
+ *
+ * @since 1.1.0
+ *
+ * @return int
+ */
+function get_current_user_id() {
+	return 7;
+}
+
+/**
+ * Minimal WP: the public query vars Tracker reserves.
+ *
+ * @since 1.1.0
+ */
+class WP {
+
+	/**
+	 * Public query variables.
+	 *
+	 * @var string[]
+	 */
+	public $public_query_vars = array( 'p', 'page', 's' );
+}
+
+/**
  * Minimal WP_Error.
  *
  * @since 1.1.0
@@ -446,11 +514,17 @@ class Utmatra_Test_Wpdb {
 $GLOBALS['wpdb'] = new Utmatra_Test_Wpdb();
 
 $utmatra_src = dirname( __DIR__, 2 ) . '/src/';
+require_once $utmatra_src . 'Tracking/Attribution.php';
+require_once $utmatra_src . 'Tracking/Tracker.php';
+require_once $utmatra_src . 'Reports/ConversionWebhook.php';
 require_once $utmatra_src . 'Capabilities.php';
 require_once $utmatra_src . 'Services/Support/Result.php';
 require_once $utmatra_src . 'Services/Support/ResultAdapter.php';
 require_once $utmatra_src . 'Services/Support/DateRange.php';
+require_once $utmatra_src . 'Services/SettingsService.php';
+require_once $utmatra_src . 'Rest/Controllers/SettingsController.php';
 require_once $utmatra_src . 'Abilities/AbilityDefinition.php';
 require_once $utmatra_src . 'Abilities/OptIn.php';
+require_once $utmatra_src . 'Abilities/SettingsSchema.php';
 require_once $utmatra_src . 'Abilities/AbilitiesRegistrar.php';
 require_once $utmatra_src . 'Admin/RestController.php';

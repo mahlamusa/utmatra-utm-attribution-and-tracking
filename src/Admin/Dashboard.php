@@ -4,12 +4,14 @@
  *
  * @since 1.0.0
  * @since 1.1.0 Menu and page check the view reports capability.
+ * @since 1.1.0 Sends the AI agent settings opt-in to the dashboard.
  *
  * @package Utmatra\Admin
  */
 
 namespace Utmatra\Admin;
 
+use Utmatra\Abilities\OptIn;
 use Utmatra\Capabilities;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
@@ -24,6 +26,7 @@ defined( 'ABSPATH' ) || exit;
  *
  * @since 1.0.0
  * @since 1.1.0 Menu and page check the view reports capability.
+ * @since 1.1.0 Sends the AI agent settings opt-in to the dashboard.
  */
 class Dashboard {
 
@@ -79,6 +82,7 @@ class Dashboard {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Sends the webhook URL and secret only to users who can manage settings.
+	 * @since 1.1.0 Sends the AI agent settings opt-in.
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -159,15 +163,16 @@ class Dashboard {
 					? html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' )
 					: '',
 				'settings'       => array(
-					'retentionDays'   => (int) get_option( 'utmatra_retention_days', 180 ),
-					'weeklyEmail'     => WeeklyEmail::enabled(),
-					'cookieDays'      => (int) get_option( 'utmatra_cookie_days', 90 ),
-					'webhookUrl'      => $can_manage_settings ? ConversionWebhook::url() : '',
-					'webhookPreset'   => ConversionWebhook::preset(),
-					'webhookOrders'   => ConversionWebhook::events()['orders'],
-					'webhookLeads'    => ConversionWebhook::events()['leads'],
-					'consentCategory' => Attribution::consent_category(),
-					'trackVisits'     => 1 === (int) get_option( 'utmatra_track_visits', 1 ),
+					'retentionDays'      => (int) get_option( 'utmatra_retention_days', 180 ),
+					'weeklyEmail'        => WeeklyEmail::enabled(),
+					'cookieDays'         => (int) get_option( 'utmatra_cookie_days', 90 ),
+					'webhookUrl'         => $can_manage_settings ? ConversionWebhook::url() : '',
+					'webhookPreset'      => ConversionWebhook::preset(),
+					'webhookOrders'      => ConversionWebhook::events()['orders'],
+					'webhookLeads'       => ConversionWebhook::events()['leads'],
+					'consentCategory'    => Attribution::consent_category(),
+					'trackVisits'        => 1 === (int) get_option( 'utmatra_track_visits', 1 ),
+					'allowAgentSettings' => 1 === (int) get_option( OptIn::OPTION, 0 ),
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => $can_manage_settings ? ConversionWebhook::secret() : '',
