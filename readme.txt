@@ -325,6 +325,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Fixed: the daily clicks series in the stats always has one entry per day of the period in date order; a click near the start of the period recorded under a different daylight saving offset no longer appears as an extra day after today.
 * Fixed: removing the WooCommerce order key from event destinations and referrers keeps the rest of the query string exactly as stored (for example `ref.id`, `tags[]` and `%20`) instead of rewriting it.
 * Fixed: a link can no longer be created with the slug `0`, which never redirected or recorded a click.
+* Fixed: a custom parameter named `constructor` is no longer pre-filled with browser code in the link drawer, and saving custom parameters through the REST API as a list of names no longer removes them all.
 * Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 * Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
 * Security: events no longer return the WooCommerce order key; the `key` argument is removed from order destinations, and any argument holding a WooCommerce order key is removed from every destination and referrer, in the events, journeys and export REST routes and abilities. Stored rows are unchanged.

@@ -37,6 +37,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - The `clicks_by_day` series in `GET /stats` and the `get-stats` ability always has one entry per day of the period in date order. A click near the start of the period recorded under a different daylight saving offset than today's was added as an extra, out-of-order day after today; it is now left out of the series, as conversions already were.
 - Removing the WooCommerce order key from event destinations and referrers no longer rewrites the rest of the query string: the other arguments are returned exactly as stored (for example `ref.id`, `tags[]` and `%20`), instead of being rebuilt by WordPress. A query pair whose name holds a WooCommerce order key is now removed too.
 - Creating a link with the slug `0` (`POST /links`, the `create-link` ability, or a label of `0`) now returns a 400 `utmatra_invalid_slug` error. Such a link never redirected or recorded a click; recreate any existing one under another slug.
+- Custom parameters: a parameter named `constructor` no longer shows `function Object() { [native code] }` in the Add, Edit and Duplicate link drawer (where it could be saved into the link), and `POST /settings` with `custom_params` sent as a list of names (the shape the settings are read back in) now saves that list with the same validation as the comma separated string, instead of silently removing every custom parameter. An empty list removes them all, like an empty string; a list holding anything but strings returns a 400 error.
 
 ### Security
 

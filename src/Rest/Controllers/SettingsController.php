@@ -11,6 +11,7 @@ namespace Utmatra\Rest\Controllers;
 
 use Utmatra\Services\SettingsService;
 use Utmatra\Services\Support\ResultAdapter;
+use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
 
@@ -74,6 +75,37 @@ class SettingsController {
 		}
 
 		return ResultAdapter::to_rest_response( SettingsService::save( $params ) );
+	}
+
+	/**
+	 * Sanitize callback for the `custom_params` route argument.
+	 *
+	 * Accepts the comma/space separated string the dashboard sends, or a
+	 * list of names (the shape the settings are read back in), which is
+	 * joined with commas. Both then go through the same sanitize_text_field()
+	 * and SettingsService validation, so a list is never turned into an
+	 * empty string that removes every custom parameter; only an empty list
+	 * removes them all, like an empty string.
+	 *
+	 * @since 1.1.0 Accepts a list of names as well as the comma separated string.
+	 *
+	 * @param mixed $value Raw argument value.
+	 *
+	 * @return string|WP_Error The sanitized string, or a 400 error for a list holding anything but strings.
+	 */
+	public static function sanitize_custom_params( $value ) {
+		if ( is_array( $value ) ) {
+			if ( count( array_filter( $value, 'is_string' ) ) !== count( $value ) ) {
+				return new WP_Error(
+					'rest_invalid_param',
+					__( 'custom_params must be a comma separated string or a list of parameter names.', 'utmatra-utm-attribution-and-tracking' ),
+					array( 'status' => 400 )
+				);
+			}
+			$value = implode( ',', $value );
+		}
+
+		return sanitize_text_field( $value );
 	}
 
 	/**

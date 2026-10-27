@@ -80,6 +80,7 @@ class RestController {
 	 * @since 1.1.0 GET /diagnostics delegates to DiagnosticsController.
 	 * @since 1.1.0 The journeys routes delegate to JourneysController.
 	 * @since 1.1.0 The date-ranged routes share their arguments through date_args().
+	 * @since 1.1.0 The settings route also accepts `custom_params` as a list of names.
 	 *
 	 * @return void
 	 */
@@ -313,7 +314,7 @@ class RestController {
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 					'custom_params'        => array(
-						'sanitize_callback' => 'sanitize_text_field',
+						'sanitize_callback' => array( SettingsController::class, 'sanitize_custom_params' ),
 					),
 					'allow_agent_settings' => array(
 						'sanitize_callback' => 'rest_sanitize_boolean',
