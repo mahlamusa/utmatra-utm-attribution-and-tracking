@@ -32,6 +32,7 @@
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
  * @since 1.1.0 The test email and test webhook routes delegate to NotificationsController.
+ * @since 1.1.0 GET /diagnostics is served by Rest\Controllers\DiagnosticsController.
  *
  * @package Utmatra\Admin
  */
@@ -42,10 +43,10 @@ use DateTimeImmutable;
 use DateTimeZone;
 use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
-use Utmatra\Diagnostics\Checks;
 use Utmatra\Rest\Controllers\NotificationsController;
 use Utmatra\Rest\Controllers\SettingsController;
 use Utmatra\Reports\ConversionWebhook;
+use Utmatra\Rest\Controllers\DiagnosticsController;
 use Utmatra\Rest\Controllers\EventsController;
 use Utmatra\Rest\Controllers\StatsController;
 use Utmatra\Services\EventsService;
@@ -69,6 +70,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
  * @since 1.1.0 The test email and test webhook routes delegate to NotificationsController.
+ * @since 1.1.0 GET /diagnostics is served by Rest\Controllers\DiagnosticsController.
  */
 class RestController {
 
@@ -92,6 +94,7 @@ class RestController {
 	 * @since 1.1.0 GET /stats delegates to StatsController.
 	 * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
 	 * @since 1.1.0 The test email and test webhook routes use NotificationsController.
+	 * @since 1.1.0 GET /diagnostics delegates to DiagnosticsController.
 	 *
 	 * @return void
 	 */
@@ -397,7 +400,7 @@ class RestController {
 			'/diagnostics',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( self::class, 'get_diagnostics' ),
+				'callback'            => array( DiagnosticsController::class, 'get_diagnostics' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 			)
 		);
@@ -732,18 +735,5 @@ class RestController {
 	 */
 	private static function format_event( array $row ): array {
 		return EventsService::format_event( $row );
-	}
-
-	/**
-	 * GET utmatra/v1/diagnostics — run the Tracking Doctor checks.
-	 *
-	 * Computed fresh on every request; every check is a cheap local read
-	 * (option/meta reads, a bounded orders query), never cached.
-	 *
-	 * @since 1.0.0
-	 * @return WP_REST_Response
-	 */
-	public static function get_diagnostics(): WP_REST_Response {
-		return new WP_REST_Response( array( 'checks' => Checks::run_all() ), 200 );
 	}
 }
