@@ -96,7 +96,8 @@ class SendTestEmail implements AbilityDefinition {
 	/**
 	 * Execute callback: send the email, return whether it was sent.
 	 *
-	 * Fires `utmatra_ability_executed` when the email was sent.
+	 * Fires `utmatra_ability_executed` after the send, whether or not the
+	 * mailer accepted the email.
 	 *
 	 * @since 1.1.0
 	 *
@@ -107,10 +108,8 @@ class SendTestEmail implements AbilityDefinition {
 	public static function execute( $input = array() ): array {
 		$result = NotificationsService::send_test_email();
 
-		if ( $result['sent'] ) {
-			/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
-			do_action( 'utmatra_ability_executed', 'utmatra/send-test-email', get_current_user_id(), array_keys( (array) $input ) );
-		}
+		/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
+		do_action( 'utmatra_ability_executed', 'utmatra/send-test-email', get_current_user_id(), array_keys( (array) $input ) );
 
 		return $result;
 	}

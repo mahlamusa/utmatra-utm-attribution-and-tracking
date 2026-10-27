@@ -109,7 +109,7 @@ class SendTestWebhook implements AbilityDefinition {
 	 * Execute callback: send the test payload, return whether it was sent.
 	 *
 	 * Fires `utmatra_ability_executed` with the input keys (never values)
-	 * when the payload was sent.
+	 * after the send, whether or not the receiver accepted the payload.
 	 *
 	 * @since 1.1.0
 	 *
@@ -124,10 +124,8 @@ class SendTestWebhook implements AbilityDefinition {
 			isset( $input['leads'] ) ? (bool) $input['leads'] : null
 		);
 
-		if ( $result['sent'] ) {
-			/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
-			do_action( 'utmatra_ability_executed', 'utmatra/send-test-webhook', get_current_user_id(), array_keys( $input ) );
-		}
+		/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
+		do_action( 'utmatra_ability_executed', 'utmatra/send-test-webhook', get_current_user_id(), array_keys( $input ) );
 
 		return $result;
 	}
