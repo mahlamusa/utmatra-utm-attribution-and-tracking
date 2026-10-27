@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T08:10:16+00:00\n"
+"POT-Creation-Date: 2026-10-27T08:12:34+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utmatra-utm-attribution-and-tracking\n"
@@ -104,7 +104,7 @@ msgid "Lists tracked events (clicks, visits, orders and leads), newest first, wi
 msgstr ""
 
 #: src/Abilities/Definitions/ListEvents.php:57
-msgid "Only events in this traffic channel, e.g. paid-search."
+msgid "Only events in this traffic channel slug, e.g. paid_search or organic_search."
 msgstr ""
 
 #: src/Abilities/Definitions/ListEvents.php:62

@@ -54,7 +54,7 @@ class ListEvents implements AbilityDefinition {
 				'properties'           => EventSchema::date_range_properties() + array(
 					'channel'    => array(
 						'type'        => 'string',
-						'description' => __( 'Only events in this traffic channel, e.g. paid-search.', 'utmatra-utm-attribution-and-tracking' ),
+						'description' => __( 'Only events in this traffic channel slug, e.g. paid_search or organic_search.', 'utmatra-utm-attribution-and-tracking' ),
 						'default'     => '',
 					),
 					'kind'       => array(
