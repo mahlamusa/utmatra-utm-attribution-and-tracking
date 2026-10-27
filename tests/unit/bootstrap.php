@@ -908,6 +908,35 @@ function home_url() {
 }
 
 /**
+ * Stub of esc_url_raw(); keeps a URL whose scheme is allowed, else returns ''.
+ *
+ * @since 1.1.0
+ *
+ * @param string   $url       URL.
+ * @param string[] $protocols Allowed schemes.
+ *
+ * @return string
+ */
+function esc_url_raw( $url, $protocols = array( 'http', 'https' ) ) {
+	return in_array( (string) wp_parse_url( $url, PHP_URL_SCHEME ), $protocols, true ) ? $url : '';
+}
+
+/**
+ * Stub of add_query_arg() for a single key and value.
+ *
+ * @since 1.1.0
+ *
+ * @param string $key   Query key.
+ * @param string $value Query value.
+ * @param string $url   URL.
+ *
+ * @return string
+ */
+function add_query_arg( $key, $value, $url ) {
+	return $url . ( false === strpos( $url, '?' ) ? '?' : '&' ) . $key . '=' . $value;
+}
+
+/**
  * Stub of absint().
  *
  * @since 1.1.0

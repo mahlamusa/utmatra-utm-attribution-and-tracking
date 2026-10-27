@@ -52,6 +52,12 @@ class OptionLock {
 	public static function run( string $option, callable $callback ): Result {
 		global $wpdb;
 
+		// Replica-aware drop-ins (HyperDB, LudicrousDB) send SELECTs to
+		// replicas; the lock and the re-read must use the primary.
+		if ( method_exists( $wpdb, 'send_reads_to_masters' ) ) {
+			$wpdb->send_reads_to_masters();
+		}
+
 		// Named locks are server-wide, so the name carries the options table
 		// to keep sites sharing a MySQL server from blocking each other.
 		$name     = 'utmatra:' . md5( $wpdb->dbname . '.' . $wpdb->options . '.' . $option );
