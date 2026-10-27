@@ -20,11 +20,21 @@ defined( 'ABSPATH' ) || exit;
  * ListJourneys
  *
  * Conversions with their preceding touches; the ability twin of
- * GET utmatra/v1/journeys.
+ * GET utmatra/v1/journeys, with a default per_page of 10 instead of 50.
  *
  * @since 1.1.0
  */
 class ListJourneys implements AbilityDefinition {
+
+	/**
+	 * Default journeys per page for the ability, lower than the REST default
+	 * because each journey can carry up to 100 touches.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var int
+	 */
+	public const DEFAULT_PER_PAGE = 10;
 
 	/**
 	 * The ability name.
@@ -66,8 +76,8 @@ class ListJourneys implements AbilityDefinition {
 					),
 					'per_page' => array(
 						'type'        => 'integer',
-						'description' => __( 'Journeys per page, clamped to 1-100.', 'utmatra-utm-attribution-and-tracking' ),
-						'default'     => 50,
+						'description' => __( 'Journeys per page, clamped to 1-100. Each journey can carry up to 100 touches, so keep this small.', 'utmatra-utm-attribution-and-tracking' ),
+						'default'     => self::DEFAULT_PER_PAGE,
 					),
 				),
 			),
@@ -116,6 +126,8 @@ class ListJourneys implements AbilityDefinition {
 	/**
 	 * Execute callback.
 	 *
+	 * Applies the ability's smaller per_page default when the input has none.
+	 *
 	 * @since 1.1.0
 	 *
 	 * @param array<string, mixed>|null $input Ability input.
@@ -123,7 +135,10 @@ class ListJourneys implements AbilityDefinition {
 	 * @return array<string, mixed>
 	 */
 	public function execute( $input = null ): array {
-		return JourneysService::get_journeys( (array) $input );
+		$input             = (array) $input;
+		$input['per_page'] = $input['per_page'] ?? self::DEFAULT_PER_PAGE;
+
+		return JourneysService::get_journeys( $input );
 	}
 
 	/**

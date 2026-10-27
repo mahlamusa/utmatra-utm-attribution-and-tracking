@@ -45,7 +45,8 @@ return array(
 	'journey schemas mirror the rest args'               => static function () {
 		$list = ( new ListJourneys() )->args()['input_schema']['properties'];
 		utmatra_assert_same( array( 'period', 'since', 'until', 'page', 'per_page' ), array_keys( $list ) );
-		utmatra_assert_same( 50, $list['per_page']['default'] );
+		utmatra_assert_same( ListJourneys::DEFAULT_PER_PAGE, $list['per_page']['default'] );
+		utmatra_assert_same( 10, ListJourneys::DEFAULT_PER_PAGE );
 
 		$get = ( new GetJourney() )->args()['input_schema'];
 		utmatra_assert_same( array( 'visitor_id' ), $get['required'] );
@@ -56,8 +57,15 @@ return array(
 		$GLOBALS['utmatra_test']['db_var'] = '4';
 		$output                            = ( new ListJourneys() )->execute( null );
 
-		utmatra_assert_same( JourneysService::get_journeys( array() ), $output );
+		utmatra_assert_same( JourneysService::get_journeys( array( 'per_page' => ListJourneys::DEFAULT_PER_PAGE ) ), $output );
 		utmatra_assert_same( 4, $output['total'] );
+		utmatra_assert_same( ListJourneys::DEFAULT_PER_PAGE, $output['per_page'] );
+	},
+
+	'list journeys keeps an explicit per page'           => static function () {
+		$output = ( new ListJourneys() )->execute( array( 'per_page' => 50 ) );
+
+		utmatra_assert_same( 50, $output['per_page'] );
 	},
 
 	'get journey returns the 404 as a wp error'          => static function () {
