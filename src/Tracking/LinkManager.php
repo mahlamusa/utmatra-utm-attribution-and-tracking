@@ -4,6 +4,9 @@
  *
  * Links are stored as a serialised array in the `utmatra_links` option.
  *
+ * @since 1.0.0
+ * @since 1.1.0 OPTION_KEY is public so LinksService can lock the option.
+ *
  * @package Utmatra\Tracking
  */
 
@@ -13,10 +16,20 @@ defined( 'ABSPATH' ) || exit;
 
 /**
  * LinkManager
+ *
+ * @since 1.0.0
  */
 class LinkManager {
 
-	private const OPTION_KEY = 'utmatra_links';
+	/**
+	 * Option holding the links.
+	 *
+	 * @since 1.0.0
+	 * @since 1.1.0 Public, so LinksService can lock the option.
+	 *
+	 * @var string
+	 */
+	public const OPTION_KEY = 'utmatra_links';
 
 	/**
 	 * Seed an example link on first activation.
