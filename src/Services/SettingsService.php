@@ -13,6 +13,7 @@ use Utmatra\Abilities\OptIn;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Services\Support\InputValue;
+use Utmatra\Services\Support\OptionLock;
 use Utmatra\Services\Support\Result;
 use Utmatra\Tracking\Attribution;
 use Utmatra\Tracking\Tracker;
@@ -29,6 +30,17 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0
  */
 class SettingsService {
+
+	/**
+	 * Lock name shared by every settings save. The settings span several
+	 * options, all autoloaded, so OptionLock's alloptions cache drop
+	 * refreshes them all.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var string
+	 */
+	private const LOCK = 'utmatra_settings';
 
 	/**
 	 * The current settings, safe to hand to an AI agent.
@@ -92,14 +104,19 @@ class SettingsService {
 	 * `$params` keeps its stored value, so a partial call (e.g. only
 	 * `weekly_email`) never resets the others to defaults.
 	 *
+	 * The stored values are read and every option is written under one
+	 * settings lock, so parallel partial saves (for example several agent
+	 * calls at once) each keep the others' changes.
+	 *
 	 * @since 1.1.0
+	 * @since 1.1.0 Reads and writes the settings under the settings lock; custom parameters are validated before it is taken.
 	 *
 	 * @param array<string, mixed> $params Sent setting name => raw value.
 	 *
-	 * @return Result The saved settings (without the opt-in), or a 400 naming a rejected custom parameter.
+	 * @return Result The saved settings (without the opt-in), a 400 naming a rejected custom parameter, or a 503 error when the lock times out.
 	 */
 	public static function save( array $params ): Result {
-		$custom_names = Tracker::custom_params();
+		$custom_names = null;
 		if ( array_key_exists( 'custom_params', $params ) ) {
 			$validated = self::validate_custom_params( InputValue::string( $params, 'custom_params' ) );
 			if ( $validated->is_error() ) {
@@ -108,62 +125,71 @@ class SettingsService {
 			$custom_names = $validated->data();
 		}
 
-		$events    = ConversionWebhook::events();
-		$retention = array_key_exists( 'retention_days', $params ) ? absint( $params['retention_days'] ) : (int) get_option( 'utmatra_retention_days', 180 );
-		$weekly    = array_key_exists( 'weekly_email', $params ) ? (bool) $params['weekly_email'] : WeeklyEmail::enabled();
-		$cookie    = array_key_exists( 'cookie_days', $params ) ? absint( $params['cookie_days'] ) : (int) get_option( 'utmatra_cookie_days', 90 );
-		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
-		$webhook   = array_key_exists( 'webhook_url', $params ) ? esc_url_raw( InputValue::string( $params, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
-		$preset    = array_key_exists( 'webhook_preset', $params ) ? InputValue::string( $params, 'webhook_preset' ) : ConversionWebhook::preset();
-		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
-			$preset = 'generic';
-		}
-		$orders  = array_key_exists( 'webhook_orders', $params ) ? (bool) $params['webhook_orders'] : (bool) $events['orders'];
-		$leads   = array_key_exists( 'webhook_leads', $params ) ? (bool) $params['webhook_leads'] : (bool) $events['leads'];
-		$consent = array_key_exists( 'consent_category', $params ) ? InputValue::string( $params, 'consent_category' ) : Attribution::consent_category();
-		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
-			$consent = 'marketing';
-		}
-		$visits = array_key_exists( 'track_visits', $params ) ? (bool) $params['track_visits'] : 1 === (int) get_option( 'utmatra_track_visits', 1 );
+		return OptionLock::run(
+			self::LOCK,
+			static function () use ( $params, $custom_names ): Result {
+				if ( null === $custom_names ) {
+					$custom_names = Tracker::custom_params();
+				}
 
-		update_option( 'utmatra_retention_days', $retention );
-		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
-		update_option( 'utmatra_cookie_days', $cookie );
-		update_option( ConversionWebhook::OPTION_URL, $webhook );
-		update_option( ConversionWebhook::OPTION_PRESET, $preset );
-		update_option(
-			ConversionWebhook::OPTION_EVENTS,
-			array(
-				'orders' => $orders,
-				'leads'  => $leads,
-			)
-		);
-		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
-		update_option( 'utmatra_track_visits', $visits ? 1 : 0 );
-		update_option( 'utmatra_custom_params', $custom_names );
-		if ( array_key_exists( 'allow_agent_settings', $params ) ) {
-			update_option( OptIn::OPTION, $params['allow_agent_settings'] ? 1 : 0 );
-		}
+				$events    = ConversionWebhook::events();
+				$retention = array_key_exists( 'retention_days', $params ) ? absint( $params['retention_days'] ) : (int) get_option( 'utmatra_retention_days', 180 );
+				$weekly    = array_key_exists( 'weekly_email', $params ) ? (bool) $params['weekly_email'] : WeeklyEmail::enabled();
+				$cookie    = array_key_exists( 'cookie_days', $params ) ? absint( $params['cookie_days'] ) : (int) get_option( 'utmatra_cookie_days', 90 );
+				$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
+				$webhook   = array_key_exists( 'webhook_url', $params ) ? esc_url_raw( InputValue::string( $params, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
+				$preset    = array_key_exists( 'webhook_preset', $params ) ? InputValue::string( $params, 'webhook_preset' ) : ConversionWebhook::preset();
+				if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
+					$preset = 'generic';
+				}
+				$orders  = array_key_exists( 'webhook_orders', $params ) ? (bool) $params['webhook_orders'] : (bool) $events['orders'];
+				$leads   = array_key_exists( 'webhook_leads', $params ) ? (bool) $params['webhook_leads'] : (bool) $events['leads'];
+				$consent = array_key_exists( 'consent_category', $params ) ? InputValue::string( $params, 'consent_category' ) : Attribution::consent_category();
+				if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
+					$consent = 'marketing';
+				}
+				$visits = array_key_exists( 'track_visits', $params ) ? (bool) $params['track_visits'] : 1 === (int) get_option( 'utmatra_track_visits', 1 );
 
-		if ( $weekly ) {
-			WeeklyEmail::schedule();
-		} else {
-			WeeklyEmail::unschedule();
-		}
+				update_option( 'utmatra_retention_days', $retention );
+				update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
+				update_option( 'utmatra_cookie_days', $cookie );
+				update_option( ConversionWebhook::OPTION_URL, $webhook );
+				update_option( ConversionWebhook::OPTION_PRESET, $preset );
+				update_option(
+					ConversionWebhook::OPTION_EVENTS,
+					array(
+						'orders' => $orders,
+						'leads'  => $leads,
+					)
+				);
+				update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
+				update_option( 'utmatra_track_visits', $visits ? 1 : 0 );
+				update_option( 'utmatra_custom_params', $custom_names );
+				if ( array_key_exists( 'allow_agent_settings', $params ) ) {
+					update_option( OptIn::OPTION, $params['allow_agent_settings'] ? 1 : 0 );
+				}
 
-		return Result::ok(
-			array(
-				'retention_days'   => $retention,
-				'weekly_email'     => $weekly,
-				'cookie_days'      => $cookie,
-				'webhook_url'      => $webhook,
-				'webhook_preset'   => $preset,
-				'webhook_orders'   => $orders,
-				'webhook_leads'    => $leads,
-				'consent_category' => $consent,
-				'track_visits'     => $visits,
-				'custom_params'    => $custom_names,
-			)
+				if ( $weekly ) {
+					WeeklyEmail::schedule();
+				} else {
+					WeeklyEmail::unschedule();
+				}
+
+				return Result::ok(
+					array(
+						'retention_days'   => $retention,
+						'weekly_email'     => $weekly,
+						'cookie_days'      => $cookie,
+						'webhook_url'      => $webhook,
+						'webhook_preset'   => $preset,
+						'webhook_orders'   => $orders,
+						'webhook_leads'    => $leads,
+						'consent_category' => $consent,
+						'track_visits'     => $visits,
+						'custom_params'    => $custom_names,
+					)
+				);
+			}
 		);
 	}
 
