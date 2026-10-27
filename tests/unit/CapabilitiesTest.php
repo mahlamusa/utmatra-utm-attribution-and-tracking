@@ -152,6 +152,7 @@ return array(
 		$GLOBALS['utmatra_test']['logged_in'] = true;
 		Capabilities::register();
 		utmatra_assert_same( 1, $GLOBALS['utmatra_test']['role_caps_refreshed'] );
+		utmatra_assert_true( $GLOBALS['utmatra_test']['role_caps_seen'][ Capabilities::MANAGE_SETTINGS ] ?? false, 'the refresh runs after the grant' );
 	},
 
 	'register skips the refresh when logged out'   => static function () {

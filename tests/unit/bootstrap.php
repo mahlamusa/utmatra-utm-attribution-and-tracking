@@ -35,6 +35,7 @@ function utmatra_test_reset(): void {
 		'db_var'     => '0',
 		'logged_in'           => false,
 		'role_caps_refreshed' => 0,
+		'role_caps_seen'      => array(),
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -583,7 +584,8 @@ function wp_get_current_user() {
 class Utmatra_Test_User {
 
 	/**
-	 * Stub of WP_User::get_role_caps().
+	 * Stub of WP_User::get_role_caps(); records the administrator caps it
+	 * would read, so tests can tell a refresh ran after the grant.
 	 *
 	 * @since 1.1.0
 	 *
@@ -591,7 +593,8 @@ class Utmatra_Test_User {
 	 */
 	public function get_role_caps() {
 		++$GLOBALS['utmatra_test']['role_caps_refreshed'];
-		return array();
+		$GLOBALS['utmatra_test']['role_caps_seen'] = $GLOBALS['utmatra_test']['roles']['administrator'] ?? array();
+		return $GLOBALS['utmatra_test']['role_caps_seen'];
 	}
 }
 
