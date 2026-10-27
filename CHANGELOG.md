@@ -22,6 +22,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
 - The REST handlers were refactored into a service layer shared with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
+- The AI agent settings opt-in error and the settings, test email and test webhook ability descriptions now name a user who can manage Utmatra settings instead of an administrator. The untrusted-data note on read abilities also lists the click ids and the custom and meta values.
 
 ### Fixed
 

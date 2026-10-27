@@ -63,7 +63,7 @@ class UpdateSettings implements AbilityDefinition {
 	public function args(): array {
 		return array(
 			'label'               => __( 'Update Utmatra settings', 'utmatra-utm-attribution-and-tracking' ),
-			'description'         => __( 'Changes the Utmatra settings sent and keeps the others. Requires an administrator to allow AI agents to change settings. The webhook URL cannot be changed here. retention_days is 0 (keep forever) or 30 to 3650; events older than the window are deleted permanently.', 'utmatra-utm-attribution-and-tracking' ),
+			'description'         => __( 'Changes the Utmatra settings sent and keeps the others. Requires a user who can manage Utmatra settings to allow AI agents to change settings. The webhook URL cannot be changed here. retention_days is 0 (keep forever) or 30 to 3650; events older than the window are deleted permanently.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => self::input_schema(),
 			'output_schema'       => SettingsSchema::output(),
 			'execute_callback'    => array( self::class, 'execute' ),
@@ -190,15 +190,7 @@ class UpdateSettings implements AbilityDefinition {
 			return ResultAdapter::to_wp_error( $result );
 		}
 
-		/**
-		 * Fires after an Utmatra write ability ran successfully.
-		 *
-		 * @since 1.1.0
-		 *
-		 * @param string   $ability_id Ability name.
-		 * @param int      $user_id    Current user ID.
-		 * @param string[] $input_keys Names of the input fields sent (no values).
-		 */
+		/** This action is documented in src/Abilities/LinkAbilities.php */
 		do_action( 'utmatra_ability_executed', 'utmatra/update-settings', get_current_user_id(), array_keys( $input ) );
 
 		return SettingsService::read();

@@ -65,6 +65,8 @@ class SettingsController {
 	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
 		$params = array();
 		$keys   = self::from_dashboard( $request ) ? self::KEYS : array_diff( self::KEYS, array( 'allow_agent_settings' ) );
+		// Only sent params: SettingsService::save() keeps a setting whose key is
+		// absent, so RequestInput::pick() (null for absent keys) would reset it.
 		foreach ( $keys as $key ) {
 			if ( $request->has_param( $key ) ) {
 				$params[ $key ] = $request->get_param( $key );

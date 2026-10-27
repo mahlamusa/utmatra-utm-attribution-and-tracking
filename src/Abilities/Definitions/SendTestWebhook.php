@@ -50,7 +50,7 @@ class SendTestWebhook implements AbilityDefinition {
 	public function args(): array {
 		return array(
 			'label'               => __( 'Send a test Utmatra webhook', 'utmatra-utm-attribution-and-tracking' ),
-			'description'         => __( 'Sends a test payload to the saved conversion webhook URL now. preset and leads override the saved webhook preset and form lead toggle for this test only. Requires an administrator to allow AI agents to change settings. Returns sent: false when no webhook URL is saved, no event is enabled, the hubspot preset is tested without form leads or the receiver did not accept the payload.', 'utmatra-utm-attribution-and-tracking' ),
+			'description'         => __( 'Sends a test payload to the saved conversion webhook URL now. preset and leads override the saved webhook preset and form lead toggle for this test only. Requires a user who can manage Utmatra settings to allow AI agents to change settings. Returns sent: false when no webhook URL is saved, no event is enabled, the hubspot preset is tested without form leads or the receiver did not accept the payload.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => self::input_schema(),
 			'output_schema'       => array(
 				'type'       => 'object',
@@ -137,7 +137,7 @@ class SendTestWebhook implements AbilityDefinition {
 			isset( $input['leads'] ) ? (bool) $input['leads'] : null
 		);
 
-		/** This action is documented in src/Abilities/Definitions/UpdateSettings.php */
+		/** This action is documented in src/Abilities/LinkAbilities.php */
 		do_action( 'utmatra_ability_executed', 'utmatra/send-test-webhook', get_current_user_id(), array_keys( $input ) );
 
 		return $result;

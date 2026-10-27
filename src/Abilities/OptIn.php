@@ -69,7 +69,7 @@ class OptIn {
 
 		return new WP_Error(
 			'utmatra_agent_settings_disabled',
-			__( 'AI agents are not allowed to change Utmatra settings. An administrator can turn on "Allow AI agents to change settings" in the Settings card of the Utmatra dashboard.', 'utmatra-utm-attribution-and-tracking' ),
+			__( 'AI agents are not allowed to change Utmatra settings. A user who can manage Utmatra settings can turn on "Allow AI agents to change settings" in the Settings card of the Utmatra dashboard.', 'utmatra-utm-attribution-and-tracking' ),
 			array( 'status' => 403 )
 		);
 	}
