@@ -170,8 +170,11 @@ class StatsService {
 			$by_day[ $day ]   = 0;
 			$conv_day[ $day ] = 0;
 		}
+		// Rows the current-offset grouping puts outside the scaffold (a
+		// different DST offset at the period edge) are dropped, so the series
+		// always has one entry per scaffold day in date order.
 		foreach ( (array) $by_day_raw as $row ) {
-			if ( isset( $row['day'] ) ) {
+			if ( isset( $row['day'], $by_day[ $row['day'] ] ) ) {
 				$by_day[ $row['day'] ] = (int) $row['count'];
 			}
 		}
