@@ -56,10 +56,10 @@ class EventSchema {
 				'default'     => '',
 			),
 			'since'    => $date + array(
-				'description' => __( 'Custom range start date, Y-m-d in the site timezone. Used only together with until: on its own, or when it is after until or after today, it is ignored and period applies. A range longer than 365 days is clamped to start 365 days before until.', 'utmatra-utm-attribution-and-tracking' ),
+				'description' => __( 'Custom range start date, Y-m-d in the site timezone. Used only together with until: on its own, or when it is after until or after today, it is ignored and period applies. A range longer than 365 days is clamped to start 365 days before the end date.', 'utmatra-utm-attribution-and-tracking' ),
 			),
 			'until'    => $date + array(
-				'description' => __( 'Custom range end date, Y-m-d in the site timezone, inclusive. A future date means today. Without since, the report covers period days ending on this date.', 'utmatra-utm-attribution-and-tracking' ),
+				'description' => __( 'Custom range end date, Y-m-d in the site timezone, inclusive. A future date means today. When since is missing or ignored, the report covers period days ending on this date.', 'utmatra-utm-attribution-and-tracking' ),
 			),
 		);
 	}

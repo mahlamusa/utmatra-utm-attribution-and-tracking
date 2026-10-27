@@ -188,7 +188,7 @@ Utmatra registers its features with the [WordPress Abilities API](https://develo
 
 **Read** (`utmatra_view_reports`, read-only, public to MCP):
 
-* `utmatra/get-stats`, `utmatra/list-links`, `utmatra/list-events` (up to 200 per page), `utmatra/list-journeys` (up to 100 per page), `utmatra/get-journey` and `utmatra/get-diagnostics` return the same data as the matching REST routes.
+* `utmatra/get-stats`, `utmatra/list-links`, `utmatra/list-events` (up to 200 per page), `utmatra/list-journeys` (10 per page by default, up to 100), `utmatra/get-journey` and `utmatra/get-diagnostics` return the same data as the matching REST routes.
 * `utmatra/export-events` returns export rows capped by `limit` (default 500, at most 2,000), with `returned`, `total_rows`, `truncated` and a `hint`.
 * `utmatra/get-settings` returns the settings. The webhook URL is reduced to its host, and only for users who can manage settings; the webhook secret and IP salt are never returned.
 
