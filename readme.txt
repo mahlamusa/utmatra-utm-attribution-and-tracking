@@ -257,7 +257,7 @@ Bundled libraries (the two JavaScript files ship minified as published by their 
 
 All filters shipped by the plugin:
 
-* **`utmatra_track_logged_in_users`** *(bool, default `false`)* — return `true` to record clicks from logged-in administrators (excluded by default to keep test traffic out of your stats).
+* **`utmatra_track_logged_in_users`** *(bool, default `false`)* — return `true` to record clicks from logged-in administrators (excluded by default to keep test traffic out of your stats; administrators are still redirected).
     `add_filter( 'utmatra_track_logged_in_users', '__return_true' );`
 * **`utmatra_is_bot`** *(bool, receives the user agent string)* — override the bot verdict for a user agent. Bots are redirected but never recorded.
 * **`utmatra_client_ip`** *(string)* — the client IP used for hashing, deduplication, and rate limiting. Defaults to `REMOTE_ADDR`; see the reverse proxy FAQ above.
@@ -321,6 +321,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Fixed: the request that grants the new capabilities (the first after upgrading, or a new multisite subsite's first load) now gives them to the logged-in administrator straight away, so the Utmatra menu, REST routes and abilities no longer fail until the next page load.
 * Fixed: parallel link and preset changes, for example several AI agent calls at once, no longer lose updates or create the same slug twice. A change that waits more than 3 seconds for another one returns a 503 error.
 * Fixed: parallel partial settings saves (for example several AI agent calls at once) no longer drop each other's changes. Settings saves now run one at a time; a save that cannot get the lock within 3 seconds returns a 503 error.
+* Fixed: a logged-in administrator who opens a tracked link (short link, shortcode link or QR code) is now redirected to the destination instead of seeing the home page. The click is still not recorded unless the `utmatra_track_logged_in_users` filter returns true.
 * Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 * Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
 * Security: events no longer return the WooCommerce order key; the `key` argument is removed from order destinations, and any argument holding a WooCommerce order key is removed from every destination and referrer, in the events, journeys and export REST routes and abilities. Stored rows are unchanged.

@@ -13,9 +13,10 @@
  * the row, so conversions can be shown with the touches that preceded them.
  *
  * Filter `utmatra_track_logged_in_users` (bool, default false) controls whether
- * administrator clicks are recorded.
+ * administrator clicks are recorded. Administrators are still redirected.
  *
  * @since 1.0.0
+ * @since 1.1.0 Redirects logged-in administrators on tracked links without recording the click.
  *
  * @package Utmatra\Tracking
  */
@@ -31,6 +32,7 @@ defined( 'ABSPATH' ) || exit;
  * Tracker
  *
  * @since 1.0.0
+ * @since 1.1.0 Redirects logged-in administrators on tracked links without recording the click.
  */
 class Tracker {
 
@@ -255,6 +257,7 @@ class Tracker {
 	 *
 	 * @since 1.0.0
 	 * @since 1.0.0 Recognises /go/{slug}/ requests on subdirectory installs.
+	 * @since 1.1.0 Redirects logged-in administrators without recording the click.
 	 * @return void
 	 */
 	public static function handle_incoming_request(): void {
@@ -262,11 +265,12 @@ class Tracker {
 			return;
 		}
 
-		// Bots are redirected (so social link-preview unfurls still resolve)
-		// but their clicks are never recorded. Detected once, applied at each
-		// record() call site below.
+		// Bots (so social link-preview unfurls still resolve) and, by default,
+		// logged-in administrators (so they can test their own links) are
+		// redirected but their clicks are never recorded. Decided once,
+		// applied at each record() call site below.
 		$ua     = isset( $_SERVER['HTTP_USER_AGENT'] ) ? sanitize_text_field( wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) ) : '';
-		$is_bot = self::is_bot( $ua );
+		$record = ! self::is_bot( $ua ) && self::should_record_user();
 
 		// --- 1. Outbound redirect ---
 		// phpcs:ignore WordPress.Security.NonceVerification.Recommended
@@ -287,7 +291,7 @@ class Tracker {
 					'custom'       => (array) ( $link['custom'] ?? array() ),
 					'destination'  => $destination,
 				);
-				if ( ! $is_bot && ! self::is_duplicate( $data ) ) {
+				if ( $record && ! self::is_duplicate( $data ) ) {
 					self::record( $data );
 				}
 				wp_redirect( $destination, 302 ); // phpcs:ignore WordPress.Security.SafeRedirect.wp_redirect_wp_redirect
@@ -319,7 +323,7 @@ class Tracker {
 			}
 		}
 
-		if ( ! $is_bot && ! empty( $params ) ) {
+		if ( $record && ! empty( $params ) ) {
 			$data = array_merge(
 				$params,
 				array(
@@ -518,11 +522,10 @@ class Tracker {
 	 * the 302 on the redirect path (so social link-preview unfurls resolve).
 	 * The bot check is applied at each record() call site in
 	 * handle_incoming_request() instead, so a bot is redirected but not logged.
-	 *
-	 * By default logged-in admins are also excluded.
-	 * Return `true` from the `utmatra_track_logged_in_users` filter to override.
+	 * Logged-in administrators are handled the same way, see should_record_user().
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 No longer excludes logged-in administrators, so they are redirected.
 	 * @return bool
 	 */
 	private static function should_track(): bool {
@@ -548,7 +551,20 @@ class Tracker {
 		if ( false !== strpos( $request_uri, '/' . rest_get_url_prefix() . '/' ) ) {
 			return false;
 		}
+		return true;
+	}
 
+	/**
+	 * Determine whether the current user's clicks should be recorded.
+	 *
+	 * By default logged-in administrators are not recorded, to keep test
+	 * traffic out of the stats; they still receive the redirect.
+	 * Return `true` from the `utmatra_track_logged_in_users` filter to override.
+	 *
+	 * @since 1.1.0 Split out of should_track() so administrators are redirected but not recorded.
+	 * @return bool
+	 */
+	private static function should_record_user(): bool {
 		if ( is_user_logged_in() && current_user_can( 'manage_options' ) ) {
 			/**
 			 * Whether to track clicks from logged-in administrators.
