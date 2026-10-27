@@ -11,6 +11,7 @@
  * @since 1.1.0 Loads the stats service and controller.
  * @since 1.1.0 Loads the events service, controller and schema.
  * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
+ * @since 1.1.0 Loads the notifications service and controller.
  *
  * @package Utmatra
  */
@@ -27,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Loads the stats service and controller.
  * @since 1.1.0 Loads the events service, controller and schema.
  * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
+ * @since 1.1.0 Loads the notifications service and controller.
  */
 class Bootstrap {
 
@@ -41,6 +43,7 @@ class Bootstrap {
 	 * @since 1.1.0 Loads the stats service and controller.
 	 * @since 1.1.0 Loads the events service, controller and schema.
 	 * @since 1.1.0 Loads the links and presets services, controllers and ability helpers.
+	 * @since 1.1.0 Loads the notifications service and controller.
 	 * @return void
 	 */
 	public static function load(): void {
