@@ -24,6 +24,21 @@ return array(
 		utmatra_assert_same( array( 'spring' ), array_keys( get_option( 'utmatra_links' ) ) );
 	},
 
+	'the slug 0 is rejected as invalid, from the id or the label' => static function () {
+		foreach ( array( array( 'id' => '0' ), array( 'label' => '0' ) ) as $slug_input ) {
+			$result = LinksService::create( $slug_input + array( 'destination' => 'https://example.com/' ) );
+
+			utmatra_assert_same( 400, $result->status() );
+			utmatra_assert_same( 'utmatra_invalid_slug', $result->code() );
+		}
+		utmatra_assert_same( null, get_option( 'utmatra_links', null ) );
+	},
+
+	'all-digit slugs other than 0 are still accepted' => static function () {
+		utmatra_assert_same( 201, LinksService::create( array( 'id' => '00', 'destination' => 'https://example.com/' ) )->status() );
+		utmatra_assert_same( 201, LinksService::create( array( 'id' => '123', 'destination' => 'https://example.com/' ) )->status() );
+	},
+
 	'update returns the saved link with its click count and keeps unconfigured custom values' => static function () {
 		$GLOBALS['utmatra_test']['options']['utmatra_links'] = array(
 			'spring' => array(

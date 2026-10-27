@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - A logged-in administrator who opens a tracked link (`/go/<slug>/`, `/?utmatra_track=<slug>`, a shortcode link or a QR code) is now redirected to the destination instead of seeing the home page. The click is still not recorded unless the `utmatra_track_logged_in_users` filter returns true.
 - The `clicks_by_day` series in `GET /stats` and the `get-stats` ability always has one entry per day of the period in date order. A click near the start of the period recorded under a different daylight saving offset than today's was added as an extra, out-of-order day after today; it is now left out of the series, as conversions already were.
 - Removing the WooCommerce order key from event destinations and referrers no longer rewrites the rest of the query string: the other arguments are returned exactly as stored (for example `ref.id`, `tags[]` and `%20`), instead of being rebuilt by WordPress. A query pair whose name holds a WooCommerce order key is now removed too.
+- Creating a link with the slug `0` (`POST /links`, the `create-link` ability, or a label of `0`) now returns a 400 `utmatra_invalid_slug` error. Such a link never redirected or recorded a click; recreate any existing one under another slug.
 
 ### Security
 
