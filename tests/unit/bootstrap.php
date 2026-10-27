@@ -30,6 +30,7 @@ function utmatra_test_reset(): void {
 		'abilities'  => array(),
 		'routes'     => array(),
 		'did_actions' => array(),
+		'queries'    => array(),
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -493,6 +494,15 @@ class WP_REST_Response {
 class Utmatra_Test_Wpdb {
 
 	/**
+	 * Table prefix.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @var string
+	 */
+	public $prefix = 'wp_';
+
+	/**
 	 * Substitute the placeholders.
 	 *
 	 * @param string $query Query with %s / %d placeholders.
@@ -510,8 +520,101 @@ class Utmatra_Test_Wpdb {
 			$query
 		);
 	}
+
+	/**
+	 * Record the query; return no rows.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $query  SQL.
+	 * @param string $output Ignored.
+	 *
+	 * @return array
+	 */
+	public function get_results( $query, $output = 'OBJECT' ) {
+		$GLOBALS['utmatra_test']['queries'][] = $query;
+		return array();
+	}
+
+	/**
+	 * Record the query; return a zero count.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $query SQL.
+	 *
+	 * @return string
+	 */
+	public function get_var( $query ) {
+		$GLOBALS['utmatra_test']['queries'][] = $query;
+		return '0';
+	}
+
+	/**
+	 * Record the query; return no values.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $query SQL.
+	 *
+	 * @return array
+	 */
+	public function get_col( $query ) {
+		$GLOBALS['utmatra_test']['queries'][] = $query;
+		return array();
+	}
 }
 $GLOBALS['wpdb'] = new Utmatra_Test_Wpdb();
+
+define( 'ARRAY_A', 'ARRAY_A' );
+
+/**
+ * Stub of wp_timezone(); the site runs on UTC.
+ *
+ * @since 1.1.0
+ *
+ * @return DateTimeZone
+ */
+function wp_timezone() {
+	return new DateTimeZone( 'UTC' );
+}
+
+/**
+ * Stub of esc_sql().
+ *
+ * @since 1.1.0
+ *
+ * @param string $value Value.
+ *
+ * @return string
+ */
+function esc_sql( $value ) {
+	return addslashes( (string) $value );
+}
+
+/**
+ * Stub of home_url().
+ *
+ * @since 1.1.0
+ *
+ * @return string
+ */
+function home_url() {
+	return 'https://example.test';
+}
+
+/**
+ * Stub of absint().
+ *
+ * @since 1.1.0
+ *
+ * @param mixed $value Value.
+ *
+ * @return int
+ */
+function absint( $value ) {
+	return abs( (int) $value );
+}
 
 $utmatra_src = dirname( __DIR__, 2 ) . '/src/';
 require_once $utmatra_src . 'Tracking/Attribution.php';
@@ -523,6 +626,11 @@ require_once $utmatra_src . 'Services/Support/ResultAdapter.php';
 require_once $utmatra_src . 'Services/Support/DateRange.php';
 require_once $utmatra_src . 'Services/SettingsService.php';
 require_once $utmatra_src . 'Rest/Controllers/SettingsController.php';
+require_once $utmatra_src . 'DB/Schema.php';
+require_once $utmatra_src . 'Tracking/TrafficSource.php';
+require_once $utmatra_src . 'Services/StatsBreakdowns.php';
+require_once $utmatra_src . 'Services/StatsService.php';
+require_once $utmatra_src . 'Rest/Controllers/StatsController.php';
 require_once $utmatra_src . 'Abilities/AbilityDefinition.php';
 require_once $utmatra_src . 'Abilities/OptIn.php';
 require_once $utmatra_src . 'Abilities/SettingsSchema.php';

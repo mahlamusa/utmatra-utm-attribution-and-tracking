@@ -28,6 +28,7 @@
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
+ * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  *
  * @package Utmatra\Admin
  */
@@ -43,6 +44,7 @@ use Utmatra\Diagnostics\Checks;
 use Utmatra\Rest\Controllers\SettingsController;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Rest\Controllers\StatsController;
 use Utmatra\Services\Support\DateRange;
 use Utmatra\Tracking\LinkManager;
 use Utmatra\Tracking\Tracker;
@@ -60,6 +62,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
+ * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  */
 class RestController {
 
@@ -81,6 +84,7 @@ class RestController {
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 The settings route uses SettingsController and accepts `allow_agent_settings`.
+	 * @since 1.1.0 GET /stats delegates to StatsController.
 	 *
 	 * @return void
 	 */
@@ -90,7 +94,7 @@ class RestController {
 			'/stats',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( self::class, 'get_stats' ),
+				'callback'            => array( StatsController::class, 'get_stats' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
 					'period'   => array(
@@ -427,319 +431,6 @@ class RestController {
 	}
 
 	/**
-	 * GET utmatra/v1/stats
-	 *
-	 * Rows are stored in UTC; day grouping and the period boundary use the
-	 * site timezone by shifting `clicked_at` with the site's current UTC
-	 * offset. Known limitation: rows recorded under a different DST offset
-	 * than today's can shift by an hour — acceptable for daily aggregation.
-	 *
-	 * Click-oriented queries exclude conversion rows (`is_conversion = 1`,
-	 * written by the WooCommerce integration and the lead recorder) so a
-	 * converting visit is not double-counted as a click, and untagged
-	 * landing visits (`link_id =
-	 * 'visit'`), which only the `by_channel` breakdown reports.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function get_stats( WP_REST_Request $request ): WP_REST_Response {
-		global $wpdb;
-		$table    = esc_sql( Schema::table() );
-		$campaign = (string) $request->get_param( 'campaign' );
-
-		$timezone  = wp_timezone();
-		$now_local = self::resolve_now_local( $request, $timezone );
-		$period    = self::resolve_period( $request, $now_local );
-		$offset    = (int) $timezone->getOffset( $now_local );
-
-		$where = self::build_where( $period, $campaign, $now_local );
-		// Untagged landing visits are not clicks: every click metric
-		// excludes them; only the Channels breakdown below includes them.
-		$click_where = $where . " AND is_conversion = 0 AND link_id != 'visit'";
-
-		// Clicks by day, grouped on the site-local date.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table, no cache layer by design; WHERE clauses are built by build_where() through $wpdb->prepare()
-		$by_day_raw = $wpdb->get_results(
-			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where}
-			 GROUP BY DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) )
-			 ORDER BY day ASC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Conversions by day (WooCommerce order rows plus form lead rows), same local-date grouping.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$conv_day_raw = $wpdb->get_results(
-			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$where} AND is_conversion = 1
-			 GROUP BY DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) )
-			 ORDER BY day ASC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Build a full date scaffold so days with zero clicks still appear.
-		$by_day   = array();
-		$conv_day = array();
-		for ( $i = $period; $i >= 0; $i-- ) {
-			$day              = $now_local->modify( "-{$i} days" )->format( 'Y-m-d' );
-			$by_day[ $day ]   = 0;
-			$conv_day[ $day ] = 0;
-		}
-		foreach ( (array) $by_day_raw as $row ) {
-			if ( isset( $row['day'] ) ) {
-				$by_day[ $row['day'] ] = (int) $row['count'];
-			}
-		}
-		foreach ( (array) $conv_day_raw as $row ) {
-			if ( isset( $row['day'], $conv_day[ $row['day'] ] ) ) {
-				$conv_day[ $row['day'] ] = (int) $row['count'];
-			}
-		}
-
-		// Previous-period clicks by day, for the chart overlay — a full
-		// calendar-day window exactly `$period` days earlier than the current
-		// one (distinct from build_previous_where()'s elapsed-duration window
-		// used by the trend indicator, which needs an equal-duration
-		// comparison rather than day-aligned buckets). Positions align with
-		// $by_day (both oldest-to-newest, $period + 1 entries) rather than
-		// actual dates, since the two windows cover different calendar days.
-		$prev_day_where = self::build_previous_day_where( $period, $campaign, $now_local ) . " AND is_conversion = 0 AND link_id != 'visit'";
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$prev_day_raw = $wpdb->get_results(
-			"SELECT DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) ) AS day, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$prev_day_where}
-			 GROUP BY DATE( DATE_ADD( clicked_at, INTERVAL {$offset} SECOND ) )
-			 ORDER BY day ASC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		$prev_day = array();
-		for ( $i = $period; $i >= 0; $i-- ) {
-			$prev_day[ $now_local->modify( '-' . ( $i + $period + 1 ) . ' days' )->format( 'Y-m-d' ) ] = 0;
-		}
-		foreach ( (array) $prev_day_raw as $row ) {
-			if ( isset( $row['day'], $prev_day[ $row['day'] ] ) ) {
-				$prev_day[ $row['day'] ] = (int) $row['count'];
-			}
-		}
-		$previous_clicks_by_day = array_values( $prev_day );
-
-		// By source.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_source = $wpdb->get_results(
-			"SELECT utm_source AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND utm_source != ''
-			 GROUP BY utm_source
-			 ORDER BY count DESC
-			 LIMIT 10",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// By campaign.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_campaign = $wpdb->get_results(
-			"SELECT utm_campaign AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND utm_campaign != ''
-			 GROUP BY utm_campaign
-			 ORDER BY count DESC
-			 LIMIT 10",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// By medium.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_medium = $wpdb->get_results(
-			"SELECT utm_medium AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND utm_medium != ''
-			 GROUP BY utm_medium
-			 ORDER BY count DESC
-			 LIMIT 10",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// By device type — computed once at insert time (Tracker::device_type),
-		// so this is a plain GROUP BY like every other breakdown.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_device = $wpdb->get_results(
-			"SELECT device AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND device != ''
-			 GROUP BY device
-			 ORDER BY count DESC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// By channel — the stored write-time channel, with rows written before
-		// the column existed mapped through the legacy rule set. This is the
-		// one breakdown that includes untagged landing visits, so it uses the
-		// plain period WHERE rather than $click_where.
-		$channel_case = TrafficSource::sql_channel_expression();
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- CASE expression built only from class constants passed through esc_sql()
-		$by_channel = $wpdb->get_results(
-			"SELECT {$channel_case} AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$where} AND is_conversion = 0
-			 GROUP BY label
-			 ORDER BY count DESC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Top landing pages — passive incoming visits only (redirect-link rows
-		// store the outbound destination, not a landing page). The query string
-		// is stripped so UTM variants of one URL group into a single row.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_landing = $wpdb->get_results(
-			"SELECT SUBSTRING_INDEX( destination, '?', 1 ) AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND link_id = 'incoming' AND destination != ''
-			 GROUP BY SUBSTRING_INDEX( destination, '?', 1 )
-			 ORDER BY count DESC
-			 LIMIT 10",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Top referrers — grouped by the referrer's host so every path on a
-		// referring site collapses into one row; self-referrals (internal
-		// navigation) are excluded.
-		$site_host = (string) wp_parse_url( home_url(), PHP_URL_HOST );
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_referrer = $wpdb->get_results(
-			$wpdb->prepare(
-				"SELECT SUBSTRING_INDEX( SUBSTRING_INDEX( referrer, '/', 3 ), '//', -1 ) AS label, COUNT(*) AS count
-				 FROM {$table}
-				 WHERE {$click_where} AND referrer != ''
-				   AND SUBSTRING_INDEX( SUBSTRING_INDEX( referrer, '/', 3 ), '//', -1 ) != %s
-				 GROUP BY label
-				 ORDER BY count DESC
-				 LIMIT 10",
-				$site_host
-			),
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Ad-platform breakdown — derived from which ad click ID a click
-		// carried. Rows without any click ID (organic/UTM-only traffic) are
-		// excluded; the dashboard maps the keys to display names.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$by_platform = $wpdb->get_results(
-			"SELECT CASE
-				WHEN gclid != '' THEN 'google'
-				WHEN fbclid != '' THEN 'facebook'
-				WHEN msclkid != '' THEN 'microsoft'
-				WHEN ttclid != '' THEN 'tiktok'
-				WHEN li_fat_id != '' THEN 'linkedin'
-				WHEN twclid != '' THEN 'twitter'
-			 END AS label, COUNT(*) AS count
-			 FROM {$table}
-			 WHERE {$click_where} AND ( gclid != '' OR fbclid != '' OR msclkid != '' OR ttclid != '' OR li_fat_id != '' OR twclid != '' )
-			 GROUP BY label
-			 ORDER BY count DESC",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Revenue by campaign — order conversion rows only (WooCommerce).
-		// Lead conversions carry no order total and must not inflate the
-		// order counts; legacy conversion rows seeded with other link ids
-		// keep counting, matching the Journeys tab's kind derivation.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$revenue_raw = $wpdb->get_results(
-			"SELECT utm_campaign AS label, COUNT(*) AS orders, SUM(order_total) AS revenue
-			 FROM {$table}
-			 WHERE {$where} AND is_conversion = 1 AND link_id != 'lead' AND utm_campaign != ''
-			 GROUP BY utm_campaign
-			 ORDER BY revenue DESC
-			 LIMIT 10",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		$revenue_by_campaign = array();
-		foreach ( (array) $revenue_raw as $row ) {
-			$revenue_by_campaign[] = array(
-				'label'   => (string) $row['label'],
-				'orders'  => (int) $row['orders'],
-				'revenue' => round( (float) $row['revenue'], 2 ),
-			);
-		}
-
-		// Total.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$click_where}" );
-
-		// All-time event count — drives the dashboard's first-run onboarding.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$all_time_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table}" );
-
-		// Conversions in the period (WooCommerce order rows plus form lead
-		// rows) for the totals row.
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$conversions = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where} AND is_conversion = 1" );
-
-		// Previous-period total — the same-length window immediately before
-		// this one, for the trend indicator next to the total.
-		$prev_where = self::build_previous_where( $period, $campaign, $now_local ) . " AND is_conversion = 0 AND link_id != 'visit'";
-		// phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$previous_total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$prev_where}" );
-
-		// Distinct campaigns for filter dropdown.
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching
-		$campaigns = $wpdb->get_col(
-			"SELECT DISTINCT utm_campaign FROM {$table} WHERE is_conversion = 0 AND utm_campaign != '' ORDER BY utm_campaign"
-		);
-		// phpcs:enable
-
-		$clicks_by_day = array();
-		foreach ( $by_day as $date => $count ) {
-			$clicks_by_day[] = array(
-				'date'        => $date,
-				'count'       => $count,
-				'conversions' => $conv_day[ $date ] ?? 0,
-			);
-		}
-
-		return new WP_REST_Response(
-			array(
-				'clicks_by_day'          => $clicks_by_day,
-				'by_source'              => array_values( (array) $by_source ),
-				'by_campaign'            => array_values( (array) $by_campaign ),
-				'by_medium'              => array_values( (array) $by_medium ),
-				'by_device'              => array_values( (array) $by_device ),
-				'by_channel'             => array_values( (array) $by_channel ),
-				'by_landing'             => array_values( (array) $by_landing ),
-				'by_platform'            => array_values( (array) $by_platform ),
-				'by_referrer'            => array_values( (array) $by_referrer ),
-				'revenue_by_campaign'    => $revenue_by_campaign,
-				'total'                  => $total,
-				'previous_total'         => $previous_total,
-				'previous_clicks_by_day' => $previous_clicks_by_day,
-				'conversions'            => $conversions,
-				'all_time_total'         => $all_time_total,
-				'campaigns'              => array_values( (array) $campaigns ),
-			),
-			200
-		);
-	}
-
-	/**
 	 * Resolve the reference "now" instant a stats/export request anchors to.
 	 *
 	 * @see DateRange::resolve_now_local()
@@ -789,41 +480,6 @@ class RestController {
 	 */
 	private static function build_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
 		return DateRange::build_where( $period, $campaign, $now_local );
-	}
-
-	/**
-	 * Build the prepared WHERE clause for the calendar-day window that lines
-	 * up with the chart's previous-period overlay.
-	 *
-	 * @see DateRange::build_previous_day_where()
-	 *
-	 * @since 1.0.0
-	 * @since 1.1.0 Delegates to DateRange.
-	 * @param int               $period    Period length in days.
-	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
-	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
-	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
-	 */
-	private static function build_previous_day_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
-		return DateRange::build_previous_day_where( $period, $campaign, $now_local );
-	}
-
-	/**
-	 * Build the prepared WHERE clause for the period immediately before the
-	 * requested one.
-	 *
-	 * @see DateRange::build_previous_where()
-	 *
-	 * @since 1.0.0
-	 * @since 1.0.0 Previous window now ends before the current one starts.
-	 * @since 1.1.0 Delegates to DateRange.
-	 * @param int               $period    Period length in days.
-	 * @param string            $campaign  Optional utm_campaign filter; empty for all.
-	 * @param DateTimeImmutable $now_local Reference instant (real "now", or a resolved custom `until`).
-	 * @return string Prepared SQL WHERE clause (without the WHERE keyword).
-	 */
-	private static function build_previous_where( int $period, string $campaign, DateTimeImmutable $now_local ): string {
-		return DateRange::build_previous_where( $period, $campaign, $now_local );
 	}
 
 	/**
