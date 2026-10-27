@@ -56,7 +56,7 @@ class GetSettings implements AbilityDefinition {
 				'default'              => array(),
 			),
 			'output_schema'       => SettingsSchema::output(),
-			'execute_callback'    => array( SettingsService::class, 'read' ),
+			'execute_callback'    => array( self::class, 'execute' ),
 			'permission_callback' => static function () {
 				return Capabilities::can( Capabilities::VIEW_REPORTS );
 			},
@@ -70,5 +70,24 @@ class GetSettings implements AbilityDefinition {
 				'mcp'          => array( 'public' => true ),
 			),
 		);
+	}
+
+	/**
+	 * Execute callback: the current settings.
+	 *
+	 * Users who cannot manage settings get an empty webhook URL, as on the
+	 * dashboard, because some receivers put their token in the host.
+	 *
+	 * @since 1.1.0
+	 *
+	 * @return array<string, mixed>
+	 */
+	public static function execute(): array {
+		$settings = SettingsService::read();
+		if ( ! Capabilities::can( Capabilities::MANAGE_SETTINGS ) ) {
+			$settings['webhook_url'] = '';
+		}
+
+		return $settings;
 	}
 }

@@ -49,7 +49,7 @@ class SettingsSchema {
 				),
 				'webhook_url'          => array(
 					'type'        => 'string',
-					'description' => __( 'Host of the conversion webhook URL only, never the full URL; empty when no webhook is set.', 'utmatra-utm-attribution-and-tracking' ),
+					'description' => __( 'Host of the conversion webhook URL only, never the full URL; empty when no webhook is set or the user cannot manage settings.', 'utmatra-utm-attribution-and-tracking' ),
 				),
 				'webhook_preset'       => array(
 					'type' => 'string',

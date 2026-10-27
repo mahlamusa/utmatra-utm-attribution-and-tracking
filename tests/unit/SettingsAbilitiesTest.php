@@ -76,6 +76,7 @@ return array(
 		$args = ( new UpdateSettings() )->args();
 		utmatra_assert_same( 'utmatra/update-settings', ( new UpdateSettings() )->id() );
 		utmatra_assert_false( $args['meta']['annotations']['readonly'] );
+		utmatra_assert_true( $args['meta']['annotations']['destructive'] );
 		utmatra_assert_false( $args['meta']['mcp']['public'] );
 		utmatra_assert_true( $args['meta']['show_in_rest'] );
 	},

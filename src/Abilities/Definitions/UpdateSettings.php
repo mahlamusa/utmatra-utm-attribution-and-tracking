@@ -72,7 +72,7 @@ class UpdateSettings implements AbilityDefinition {
 				'show_in_rest' => true,
 				'annotations'  => array(
 					'readonly'    => false,
-					'destructive' => false,
+					'destructive' => true,
 					'idempotent'  => true,
 				),
 				'mcp'          => array( 'public' => false ),
