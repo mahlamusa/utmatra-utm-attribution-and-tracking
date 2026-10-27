@@ -58,7 +58,7 @@ class ListEvents implements AbilityDefinition {
 				'properties'           => EventSchema::date_range_properties() + array(
 					'channel'    => array(
 						'type'        => 'string',
-						'description' => __( 'Only events in this traffic channel slug, the same slugs as the get-stats by_channel keys. Empty means every channel.', 'utmatra-utm-attribution-and-tracking' ),
+						'description' => __( 'Only events in this traffic channel slug, the same slugs as the label values in get-stats by_channel. Empty means every channel.', 'utmatra-utm-attribution-and-tracking' ),
 						'enum'        => array_merge( array( '' ), TrafficSource::CHANNELS ),
 						'default'     => '',
 					),
