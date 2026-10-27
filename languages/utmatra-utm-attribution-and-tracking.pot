@@ -9,7 +9,7 @@ msgstr ""
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
-"POT-Creation-Date: 2026-10-27T11:26:54+00:00\n"
+"POT-Creation-Date: 2026-10-27T11:42:13+00:00\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "X-Generator: WP-CLI 2.7.1\n"
 "X-Domain: utmatra-utm-attribution-and-tracking\n"
@@ -796,7 +796,7 @@ msgstr ""
 msgid "A link with this slug already exists."
 msgstr ""
 
-#: src/Services/LinksService.php:222
+#: src/Services/LinksService.php:227
 msgid "Link not found."
 msgstr ""
 
@@ -831,7 +831,7 @@ msgstr ""
 msgid "You can define up to %d custom parameters."
 msgstr ""
 
-#: src/Services/Support/OptionLock.php:63
+#: src/Services/Support/OptionLock.php:69
 msgid "Another change is being saved. Please try again."
 msgstr ""
 
