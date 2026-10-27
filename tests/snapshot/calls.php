@@ -174,10 +174,15 @@ $utmatra_snapshot_users = array(
 
 $utmatra_snapshot_v1      = '1b4e28ba-2fa1-41d2-883f-0016d3cca427';
 $utmatra_snapshot_v2      = '2c5f39cb-3ab2-42e3-994a-1127e4ddb538';
+$utmatra_snapshot_v6      = '6a9d7d0f-7ef6-46c7-988e-556bc8bf97c0';
 $utmatra_snapshot_unknown = '9a9a9a9a-9a9a-4a9a-9a9a-9a9a9a9a9a9a';
 $utmatra_snapshot_since   = utmatra_snapshot_day( 10 );
 $utmatra_snapshot_until   = utmatra_snapshot_day( 3 );
 $utmatra_snapshot_single  = utmatra_snapshot_day( 2 );
+$utmatra_snapshot_keyed   = array(
+	'since' => utmatra_snapshot_day( 801 ),
+	'until' => utmatra_snapshot_day( 799 ),
+);
 
 // Name, method, route, params (query for GET/DELETE, JSON body otherwise), user.
 $utmatra_snapshot_calls = array(
@@ -217,6 +222,10 @@ $utmatra_snapshot_calls = array(
 	array( 'export-campaign', 'GET', '/utmatra/v1/export', array( 'campaign' => 'spring-sale', 'period' => 90 ), 'admin' ),
 	array( 'export-custom-range', 'GET', '/utmatra/v1/export', array( 'since' => $utmatra_snapshot_since, 'until' => $utmatra_snapshot_until ), 'admin' ),
 	array( 'diagnostics', 'GET', '/utmatra/v1/diagnostics', array(), 'admin' ),
+	array( 'events-order-keys', 'GET', '/utmatra/v1/events', $utmatra_snapshot_keyed, 'admin' ),
+	array( 'journeys-order-keys', 'GET', '/utmatra/v1/journeys', $utmatra_snapshot_keyed, 'admin' ),
+	array( 'journey-visitor-order-keys', 'GET', '/utmatra/v1/journeys/' . $utmatra_snapshot_v6, array(), 'admin' ),
+	array( 'export-order-keys', 'GET', '/utmatra/v1/export', $utmatra_snapshot_keyed + array( 'include_visits' => true ), 'admin' ),
 
 	// Links.
 	array( 'link-create', 'POST', '/utmatra/v1/links', array( 'label' => 'Black Friday', 'destination' => 'https://example.test/bf/', 'utm_source' => 'Mail Chimp', 'utm_medium' => 'Email', 'utm_campaign' => 'Black Friday 2025', 'custom' => array( 'coupon' => 'BF25', 'unknown' => 'dropped' ) ), 'admin' ),
