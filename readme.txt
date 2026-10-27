@@ -313,7 +313,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Added: `utmatra_ability_executed` action, fired after a write ability runs, with the ability id, user id and input keys (never the values).
 * Changed: the dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
 * Changed: the REST handlers now share a service layer with the abilities. REST routes, response bodies and status codes are unchanged; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
-* Security: the webhook URL and signing secret are no longer sent to the dashboard for users who cannot manage settings.
+* Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 * Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
 * Upgrade note: custom roles that are not administrator but hold `manage_options` lose access to the Utmatra screens and REST routes unless granted one of the new capabilities (or remapped with `utmatra_capability_map`).
 

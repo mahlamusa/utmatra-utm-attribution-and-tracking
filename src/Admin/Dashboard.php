@@ -5,6 +5,7 @@
  * @since 1.0.0
  * @since 1.1.0 Menu and page check the view reports capability.
  * @since 1.1.0 Sends the AI agent settings opt-in to the dashboard.
+ * @since 1.1.0 Sends webhook data only to users who can manage settings.
  *
  * @package Utmatra\Admin
  */
@@ -27,6 +28,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.0.0
  * @since 1.1.0 Menu and page check the view reports capability.
  * @since 1.1.0 Sends the AI agent settings opt-in to the dashboard.
+ * @since 1.1.0 Sends webhook data only to users who can manage settings.
  */
 class Dashboard {
 
@@ -83,6 +85,8 @@ class Dashboard {
 	 * @since 1.0.0
 	 * @since 1.1.0 Sends the webhook URL and secret only to users who can manage settings.
 	 * @since 1.1.0 Sends the AI agent settings opt-in.
+	 * @since 1.1.0 Sends the last webhook delivery only to users who can manage settings.
+	 *
 	 * @param string $hook Current admin page hook suffix.
 	 * @return void
 	 */
@@ -146,8 +150,9 @@ class Dashboard {
 		// the JS renders it as plain text (Chart.js canvas labels).
 		$woo_active = class_exists( 'WooCommerce' );
 
-		// The webhook URL can embed a token and the secret signs payloads,
-		// so users who can only view reports never receive either.
+		// The webhook URL can embed a token, the secret signs payloads and the
+		// last delivery detail can quote the host or the receiver's response,
+		// so users who can only view reports never receive any of them.
 		$can_manage_settings = Capabilities::can( Capabilities::MANAGE_SETTINGS );
 
 		wp_localize_script(
@@ -176,7 +181,7 @@ class Dashboard {
 				),
 				'cachePlugin'    => self::detect_cache_plugin(),
 				'webhookSecret'  => $can_manage_settings ? ConversionWebhook::secret() : '',
-				'webhookLast'    => ConversionWebhook::last_delivery(),
+				'webhookLast'    => $can_manage_settings ? ConversionWebhook::last_delivery() : null,
 				'customParams'   => Tracker::custom_params(),
 			)
 		);
