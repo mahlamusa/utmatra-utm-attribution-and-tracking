@@ -14,6 +14,7 @@ use Utmatra\Abilities\Definitions\GetSettings;
 use Utmatra\Abilities\Definitions\UpdateSettings;
 use Utmatra\Abilities\OptIn;
 use Utmatra\Capabilities;
+use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Services\SettingsService;
 
@@ -145,5 +146,22 @@ return array(
 
 		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['options'][ WeeklyEmail::OPTION ] );
 		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['options']['utmatra_track_visits'] );
+	},
+
+	'update-settings drops the opt-in and webhook url before saving' => static function () {
+		$GLOBALS['utmatra_test']['options'] = array(
+			OptIn::OPTION                 => 1,
+			ConversionWebhook::OPTION_URL => 'https://hooks.example.test/saved',
+		);
+
+		UpdateSettings::execute(
+			array(
+				'allow_agent_settings' => false,
+				'webhook_url'          => 'https://attacker.example.test/',
+			)
+		);
+
+		utmatra_assert_same( 1, $GLOBALS['utmatra_test']['options'][ OptIn::OPTION ] );
+		utmatra_assert_same( 'https://hooks.example.test/saved', $GLOBALS['utmatra_test']['options'][ ConversionWebhook::OPTION_URL ] );
 	},
 );
