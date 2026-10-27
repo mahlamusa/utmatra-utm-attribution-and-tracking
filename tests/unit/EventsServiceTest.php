@@ -123,6 +123,29 @@ return array(
 		}
 	},
 
+	'format event keeps the other query pairs exactly as stored' => static function () {
+		$urls = array(
+			'https://example.test/?key=wc_order_abc&ref.id=7&tags[]=a&tags[]=b' => 'https://example.test/?ref.id=7&tags[]=a&tags[]=b',
+			'https://example.test/?c%20d=1&q=a+b&e=&key=wc_order_abc&f'         => 'https://example.test/?c%20d=1&q=a+b&e=&f',
+			'https://example.test/?key=wc_order_abc&lang=en#a?b&key=wc_order_x' => 'https://example.test/?lang=en#a?b&key=wc_order_x',
+			'https://example.test/path/?key=wc_order_abc#top'                    => 'https://example.test/path/#top',
+			'https://example.test/?ref.id=wc_order_abc&ref_id=7&a=1'            => 'https://example.test/?a=1',
+			'https://example.test/?tags[]=x&tags[]=wc_order_abc&a=1'            => 'https://example.test/?a=1',
+			'https://example.test/?q=a+b&c%20d=1#top'                           => 'https://example.test/?q=a+b&c%20d=1#top',
+			'https://example.test/?a=1&=x%26key%3Dwc_order_abc&=y'              => 'https://example.test/?a=1',
+			'https://example.test/?wc_order_abc&a=1'                            => 'https://example.test/?a=1',
+		);
+
+		foreach ( $urls as $url => $expected ) {
+			utmatra_assert_same( $expected, EventsService::format_event( array( 'id' => 1, 'link_id' => 'visit', 'destination' => $url, 'referrer' => $url ) )['destination'] );
+			utmatra_assert_same( $expected, EventsService::format_event( array( 'id' => 1, 'link_id' => 'visit', 'referrer' => $url ) )['referrer'] );
+		}
+		utmatra_assert_same(
+			'https://example.test/checkout/order-received/5/?ref.id=7&tags[]=a#top',
+			EventsService::format_event( array( 'id' => 1, 'link_id' => 'order', 'destination' => 'https://example.test/checkout/order-received/5/?key=abc&ref.id=7&key[]=b&tags[]=a#top' ) )['destination']
+		);
+	},
+
 	'get events clamps per page and page'                => static function () {
 		$GLOBALS['utmatra_test']['db_var'] = '401';
 		$result                            = EventsService::get_events(

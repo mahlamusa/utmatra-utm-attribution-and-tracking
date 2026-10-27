@@ -286,13 +286,16 @@ class EventsService {
 	 * row stores the referring page, so an order-received, order-pay or
 	 * download link carries its order key into them (as `key`, or as `order`
 	 * on download links, or inside an encoded URL such as `redirect_to`).
-	 * Every query argument whose decoded value contains `wc_order_` (any
+	 * Every query argument whose decoded pair contains `wc_order_` (any
 	 * case, duplicates and array forms included; a bracketed name drops the
-	 * whole argument) is removed, plus `key` whatever it holds when
-	 * `$any_key` is set; any other URL is returned exactly as stored
-	 * (remove_query_arg() re-encodes the query string).
+	 * whole argument, and nameless pairs go together) is removed, plus `key`
+	 * whatever it holds when `$any_key` is set. Names are compared as PHP
+	 * parses them (decoded, `[]` dropped, `.` and spaces read as `_`). The
+	 * remaining pairs and the fragment are kept exactly as stored, and a URL
+	 * without such an argument is returned unchanged.
 	 *
 	 * @since 1.1.0
+	 * @since 1.1.0 Keeps the remaining query pairs as stored instead of rebuilding the query string.
 	 *
 	 * @param string $url     Stored URL.
 	 * @param bool   $any_key Whether to remove a `key` argument whatever its value.
@@ -300,21 +303,41 @@ class EventsService {
 	 * @return string
 	 */
 	private static function without_order_key( string $url, bool $any_key = false ): string {
-		$names = array();
-		foreach ( explode( '&', (string) wp_parse_url( $url, PHP_URL_QUERY ) ) as $pair ) {
-			$parts = explode( '=', $pair, 2 );
-			// The argument name as remove_query_arg() parses it (decoded, `[]` dropped).
-			wp_parse_str( $parts[0] . '=', $parsed );
-			$name = (string) key( $parsed );
-			if ( '' === $name ) {
-				continue;
-			}
-			if ( ( $any_key && 'key' === $name ) || false !== stripos( urldecode( $parts[1] ?? '' ), 'wc_order_' ) ) {
-				$names[] = $name;
-			}
+		$fragment = '';
+		$hash     = strpos( $url, '#' );
+		if ( false !== $hash ) {
+			$fragment = substr( $url, $hash );
+			$url      = substr( $url, 0, $hash );
+		}
+		$question = strpos( $url, '?' );
+		if ( false === $question ) {
+			return $url . $fragment;
 		}
 
-		return $names ? remove_query_arg( array_unique( $names ), $url ) : $url;
+		$pairs = array();
+		$names = array();
+		foreach ( explode( '&', substr( $url, $question + 1 ) ) as $pair ) {
+			// The argument name as PHP parses it (decoded, `[]` dropped).
+			wp_parse_str( explode( '=', $pair, 2 )[0] . '=', $parsed );
+			$name = (string) key( $parsed );
+			if ( ( $any_key && 'key' === $name ) || false !== stripos( urldecode( $pair ), 'wc_order_' ) ) {
+				$names[ $name ] = true;
+			}
+			$pairs[] = array( $name, $pair );
+		}
+		if ( ! $names ) {
+			return $url . $fragment;
+		}
+
+		$kept = array();
+		foreach ( $pairs as $pair ) {
+			if ( ! isset( $names[ $pair[0] ] ) ) {
+				$kept[] = $pair[1];
+			}
+		}
+		$query = implode( '&', $kept );
+
+		return substr( $url, 0, $question ) . ( '' === $query ? '' : '?' . $query ) . $fragment;
 	}
 
 	/**
