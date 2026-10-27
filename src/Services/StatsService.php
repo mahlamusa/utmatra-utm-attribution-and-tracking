@@ -27,6 +27,8 @@ defined( 'ABSPATH' ) || exit;
  * site timezone by shifting `clicked_at` with the site's current UTC
  * offset. Known limitation: rows recorded under a different DST offset
  * than today's can shift by an hour — acceptable for daily aggregation.
+ * A row shifted before the first day of the period is left out of
+ * the daily series, so the series can sum to less than `total`.
  *
  * Click-oriented queries exclude conversion rows (`is_conversion = 1`,
  * written by the WooCommerce integration and the lead recorder) so a
@@ -170,8 +172,11 @@ class StatsService {
 			$by_day[ $day ]   = 0;
 			$conv_day[ $day ] = 0;
 		}
+		// Rows the current-offset grouping puts outside the scaffold (a
+		// different DST offset at the period edge) are dropped, so the series
+		// always has one entry per scaffold day in date order.
 		foreach ( (array) $by_day_raw as $row ) {
-			if ( isset( $row['day'] ) ) {
+			if ( isset( $row['day'], $by_day[ $row['day'] ] ) ) {
 				$by_day[ $row['day'] ] = (int) $row['count'];
 			}
 		}

@@ -34,6 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - Parallel link and preset changes (for example several AI agent calls at once) no longer lose updates: creating, updating and deleting links and presets now runs one at a time under a database lock, and two creates of the same slug return one 201 and one 409. A change that cannot get the lock within 3 seconds returns a 503 error (code `utmatra_busy` for abilities).
 - Parallel partial settings saves (for example several AI agent calls at once, each sending one setting) no longer drop each other's changes, including the order and lead webhook toggles that share one option: `POST /settings` and the `update-settings` ability now read and save the settings one save at a time under a database lock. A save that cannot get the lock within 3 seconds returns a 503 error (code `utmatra_busy` for abilities).
 - A logged-in administrator who opens a tracked link (`/go/<slug>/`, `/?utmatra_track=<slug>`, a shortcode link or a QR code) is now redirected to the destination instead of seeing the home page. The click is still not recorded unless the `utmatra_track_logged_in_users` filter returns true.
+- The `clicks_by_day` series in `GET /stats` and the `get-stats` ability always has one entry per day of the period in date order. A click near the start of the period recorded under a different daylight saving offset than today's was added as an extra, out-of-order day after today; it is now left out of the series, as conversions already were.
 
 ### Security
 
