@@ -31,6 +31,8 @@ function utmatra_test_reset(): void {
 		'routes'     => array(),
 		'did_actions' => array(),
 		'queries'    => array(),
+		'db_rows'    => array(),
+		'db_var'     => '0',
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
 			'editor'        => array( 'edit_posts' => true ),
@@ -299,6 +301,61 @@ function wp_register_ability( $name, $args ) {
 	return null;
 }
 
+if ( ! function_exists( 'sanitize_key' ) ) {
+	/**
+	 * Stub of sanitize_key().
+	 *
+	 * @since 1.1.0
+	 *
+	 * @param string $key Key.
+	 *
+	 * @return string
+	 */
+	function sanitize_key( $key ) {
+		return (string) preg_replace( '/[^a-z0-9_\-]/', '', strtolower( (string) $key ) );
+	}
+}
+
+if ( ! class_exists( 'WP_REST_Request' ) ) {
+	/**
+	 * Minimal WP_REST_Request: parameters only.
+	 *
+	 * @since 1.1.0
+	 */
+	class WP_REST_Request {
+
+		/**
+		 * Parameters.
+		 *
+		 * @var array<string, mixed>
+		 */
+		private $params = array();
+
+		/**
+		 * Set a parameter.
+		 *
+		 * @param string $key   Parameter name.
+		 * @param mixed  $value Parameter value.
+		 *
+		 * @return void
+		 */
+		public function set_param( $key, $value ) {
+			$this->params[ $key ] = $value;
+		}
+
+		/**
+		 * Get a parameter; null when absent.
+		 *
+		 * @param string $key Parameter name.
+		 *
+		 * @return mixed
+		 */
+		public function get_param( $key ) {
+			return $this->params[ $key ] ?? null;
+		}
+	}
+}
+
 /**
  * Stub of wp_parse_url(); parse_url() without the PHP < 5.4.7 fixes.
  *
@@ -487,7 +544,8 @@ class WP_REST_Response {
 }
 
 /**
- * Minimal $wpdb: prepare() quotes %s and casts %d like wpdb does.
+ * Minimal $wpdb: prepare() quotes %s and casts %d like wpdb does; the
+ * read methods record each query in the `queries` test state.
  *
  * @since 1.1.0
  */
@@ -522,7 +580,7 @@ class Utmatra_Test_Wpdb {
 	}
 
 	/**
-	 * Record the query; return no rows.
+	 * Record the query and return the `db_rows` test state (no rows by default).
 	 *
 	 * @since 1.1.0
 	 *
@@ -533,21 +591,21 @@ class Utmatra_Test_Wpdb {
 	 */
 	public function get_results( $query, $output = 'OBJECT' ) {
 		$GLOBALS['utmatra_test']['queries'][] = $query;
-		return array();
+		return $GLOBALS['utmatra_test']['db_rows'];
 	}
 
 	/**
-	 * Record the query; return a zero count.
+	 * Record the query and return the `db_var` test state (a zero count by default).
 	 *
 	 * @since 1.1.0
 	 *
 	 * @param string $query SQL.
 	 *
-	 * @return string
+	 * @return mixed
 	 */
 	public function get_var( $query ) {
 		$GLOBALS['utmatra_test']['queries'][] = $query;
-		return '0';
+		return $GLOBALS['utmatra_test']['db_var'];
 	}
 
 	/**
@@ -631,7 +689,10 @@ require_once $utmatra_src . 'Tracking/TrafficSource.php';
 require_once $utmatra_src . 'Services/StatsBreakdowns.php';
 require_once $utmatra_src . 'Services/StatsService.php';
 require_once $utmatra_src . 'Rest/Controllers/StatsController.php';
+require_once $utmatra_src . 'Services/EventsService.php';
+require_once $utmatra_src . 'Rest/Controllers/EventsController.php';
 require_once $utmatra_src . 'Abilities/AbilityDefinition.php';
+require_once $utmatra_src . 'Abilities/EventSchema.php';
 require_once $utmatra_src . 'Abilities/OptIn.php';
 require_once $utmatra_src . 'Abilities/SettingsSchema.php';
 require_once $utmatra_src . 'Abilities/AbilitiesRegistrar.php';

@@ -29,6 +29,7 @@
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
+ * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  *
  * @package Utmatra\Admin
  */
@@ -44,11 +45,12 @@ use Utmatra\Diagnostics\Checks;
 use Utmatra\Rest\Controllers\SettingsController;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
+use Utmatra\Rest\Controllers\EventsController;
 use Utmatra\Rest\Controllers\StatsController;
+use Utmatra\Services\EventsService;
 use Utmatra\Services\Support\DateRange;
 use Utmatra\Tracking\LinkManager;
 use Utmatra\Tracking\Tracker;
-use Utmatra\Tracking\TrafficSource;
 use WP_Error;
 use WP_REST_Request;
 use WP_REST_Response;
@@ -63,21 +65,21 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
  * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
+ * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  */
 class RestController {
 
 	/**
 	 * The event columns the read routes select and return.
 	 *
-	 * The privacy-light set: `ip_hash` and `user_agent` are never included.
-	 * Order matches the events table and is shared by /events, /journeys
-	 * and /journeys/{visitor_id}.
+	 * @see EventsService::EVENT_COLUMNS
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Aliases EventsService::EVENT_COLUMNS.
 	 *
 	 * @var string
 	 */
-	private const EVENT_COLUMNS = 'id, link_id, visitor_id, clicked_at, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content, gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, touch, order_total, device, channel, custom, meta';
+	private const EVENT_COLUMNS = EventsService::EVENT_COLUMNS;
 
 	/**
 	 * Register REST routes.
@@ -166,7 +168,7 @@ class RestController {
 			'/export',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( self::class, 'export_events' ),
+				'callback'            => array( EventsController::class, 'export_events' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array(
 					'period'         => array(
@@ -198,7 +200,7 @@ class RestController {
 			'/events',
 			array(
 				'methods'             => 'GET',
-				'callback'            => array( self::class, 'get_events' ),
+				'callback'            => array( EventsController::class, 'get_events' ),
 				'permission_callback' => array( self::class, 'check_permission' ),
 				'args'                => array_merge(
 					self::pagination_args(),
@@ -483,64 +485,6 @@ class RestController {
 	}
 
 	/**
-	 * GET utmatra/v1/export
-	 *
-	 * Returns raw event rows for the period as JSON; the dashboard assembles
-	 * the CSV client-side. Exports are privacy-light by design: `ip_hash` and
-	 * `user_agent` are never included. Capped at the newest 10,000 rows.
-	 * Conversion rows are included and flagged via the `is_conversion` column.
-	 * Untagged landing visits are left out unless `include_visits` is set;
-	 * every row carries its `channel`, its `visitor_id` (directly after
-	 * `order_total`) and one key per configured custom parameter (empty
-	 * string when the row has no value; the raw `custom` JSON column is
-	 * never returned).
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function export_events( WP_REST_Request $request ): WP_REST_Response {
-		global $wpdb;
-		$table    = esc_sql( Schema::table() );
-		$campaign = (string) $request->get_param( 'campaign' );
-
-		$now_local = self::resolve_now_local( $request, wp_timezone() );
-		$period    = self::resolve_period( $request, $now_local );
-		$where     = self::build_where( $period, $campaign, $now_local );
-		if ( ! $request->get_param( 'include_visits' ) ) {
-			$where .= " AND link_id != 'visit'";
-		}
-		$channel_case = TrafficSource::sql_channel_expression();
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter
-		$rows = $wpdb->get_results(
-			"SELECT clicked_at, link_id, {$channel_case} AS channel, utm_source, utm_medium, utm_campaign, utm_id, utm_term, utm_content,
-			        gclid, fbclid, msclkid, ttclid, li_fat_id, twclid, destination, referrer, is_conversion, order_total, visitor_id, custom
-			 FROM {$table}
-			 WHERE {$where}
-			 ORDER BY clicked_at DESC
-			 LIMIT 10000",
-			ARRAY_A
-		);
-		// phpcs:enable
-
-		// Spread the `custom` JSON object into one plain key per configured
-		// custom parameter name (empty string when the row carries no value),
-		// so the client-side CSV gains a column per custom parameter. Plain
-		// names are safe as keys: every events-table column name is reserved.
-		$custom_params = Tracker::custom_params();
-		foreach ( (array) $rows as $index => $row ) {
-			$decoded = json_decode( (string) ( $row['custom'] ?? '' ), true );
-			unset( $rows[ $index ]['custom'] );
-			foreach ( $custom_params as $name ) {
-				$rows[ $index ][ $name ] = isset( $decoded[ $name ] ) ? (string) $decoded[ $name ] : '';
-			}
-		}
-
-		return new WP_REST_Response( array( 'rows' => array_values( (array) $rows ) ), 200 );
-	}
-
-	/**
 	 * Shared page/per_page argument definitions for the paginated read routes.
 	 *
 	 * The handlers clamp the values (1..200 for /events, 1..100 for
@@ -560,85 +504,6 @@ class RestController {
 				'default'           => 50,
 				'sanitize_callback' => 'absint',
 			),
-		);
-	}
-
-	/**
-	 * GET utmatra/v1/events
-	 *
-	 * Paginated, filterable event rows, newest first. The date range matches
-	 * /stats (resolve_now_local/resolve_period/build_where), so the two
-	 * partition the same rows; `channel` filters the stored column only
-	 * (legacy rows hold '' and never match); `kind` filters on the derived
-	 * kind (see event_kind()); `visitor_id` accepts any UUID version, so a
-	 * non-v4 value simply matches no rows.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function get_events( WP_REST_Request $request ): WP_REST_Response {
-		global $wpdb;
-		$table    = esc_sql( Schema::table() );
-		$columns  = self::EVENT_COLUMNS;
-		$campaign = (string) $request->get_param( 'campaign' );
-
-		$now_local = self::resolve_now_local( $request, wp_timezone() );
-		$period    = self::resolve_period( $request, $now_local );
-
-		$where = self::build_where( $period, $campaign, $now_local );
-
-		$channel = (string) $request->get_param( 'channel' );
-		if ( '' !== $channel ) {
-			$where .= $wpdb->prepare( ' AND channel = %s', $channel );
-		}
-
-		$visitor_id = (string) $request->get_param( 'visitor_id' );
-		if ( '' !== $visitor_id ) {
-			$where .= $wpdb->prepare( ' AND visitor_id = %s', $visitor_id );
-		}
-
-		switch ( (string) $request->get_param( 'kind' ) ) {
-			case 'lead':
-				$where .= " AND link_id = 'lead'";
-				break;
-			case 'order':
-				$where .= " AND is_conversion = 1 AND link_id != 'lead'";
-				break;
-			case 'visit':
-				$where .= " AND link_id = 'visit'";
-				break;
-			case 'click':
-				$where .= " AND is_conversion = 0 AND link_id != 'visit'";
-				break;
-		}
-
-		$per_page = min( 200, max( 1, absint( $request->get_param( 'per_page' ) ) ) );
-		$page     = max( 1, absint( $request->get_param( 'page' ) ) );
-		$offset   = ( $page - 1 ) * $per_page;
-
-		// phpcs:disable WordPress.DB.DirectDatabaseQuery.DirectQuery,WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery.NoCaching,PluginCheck.Security.DirectDB.UnescapedDBParameter -- real-time analytics table; $columns is a class constant, $table/$where are built above through esc_sql()/$wpdb->prepare()
-		$rows  = $wpdb->get_results(
-			$wpdb->prepare( "SELECT {$columns} FROM {$table} WHERE {$where} ORDER BY clicked_at DESC, id DESC LIMIT %d OFFSET %d", $per_page, $offset ),
-			ARRAY_A
-		);
-		$total = (int) $wpdb->get_var( "SELECT COUNT(*) FROM {$table} WHERE {$where}" );
-		// phpcs:enable
-
-		$events = array();
-		foreach ( (array) $rows as $row ) {
-			$events[] = self::format_event( (array) $row );
-		}
-
-		return new WP_REST_Response(
-			array(
-				'events'      => $events,
-				'total'       => $total,
-				'page'        => $page,
-				'per_page'    => $per_page,
-				'total_pages' => (int) ceil( $total / $per_page ),
-			),
-			200
 		);
 	}
 
@@ -839,77 +704,29 @@ class RestController {
 	/**
 	 * Derive an event's kind from its row.
 	 *
-	 * Never stored: `lead` rows are form submissions, `order` covers the
-	 * WooCommerce rows plus legacy seeded conversions (which were only ever
-	 * orders), `visit` is an untagged landing, and everything else —
-	 * `incoming` tagged visits and short-link slugs — is a click, matching
-	 * how every existing click metric counts them.
+	 * @see EventsService::event_kind()
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Delegates to EventsService.
 	 * @param array<string, mixed> $row Event row (ARRAY_A).
 	 * @return string One of 'click', 'visit', 'order', 'lead'.
 	 */
 	private static function event_kind( array $row ): string {
-		$link_id = (string) ( $row['link_id'] ?? '' );
-
-		if ( 'lead' === $link_id ) {
-			return 'lead';
-		}
-		if ( 'order' === $link_id || ! empty( $row['is_conversion'] ) ) {
-			return 'order';
-		}
-		if ( 'visit' === $link_id ) {
-			return 'visit';
-		}
-		return 'click';
+		return EventsService::event_kind( $row );
 	}
 
 	/**
 	 * Serialise one event row for the read routes.
 	 *
-	 * Casts id/is_conversion/order_total, leaves clicked_at exactly as stored
-	 * (UTC `Y-m-d H:i:s`) and emits `channel` as stored ('' on legacy rows).
-	 * The two JSON columns are always objects: decoded without `assoc` and
-	 * replaced with an empty stdClass when NULL, empty or undecodable, so the
-	 * response encodes `{}` and never `[]`. `ip_hash` and `user_agent` are
-	 * never selected (see EVENT_COLUMNS).
+	 * @see EventsService::format_event()
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Delegates to EventsService.
 	 * @param array<string, mixed> $row Event row (ARRAY_A).
 	 * @return array<string, mixed>
 	 */
 	private static function format_event( array $row ): array {
-		$custom = json_decode( (string) ( $row['custom'] ?? '' ) );
-		$meta   = json_decode( (string) ( $row['meta'] ?? '' ) );
-
-		return array(
-			'id'            => (int) $row['id'],
-			'link_id'       => (string) ( $row['link_id'] ?? '' ),
-			'visitor_id'    => (string) ( $row['visitor_id'] ?? '' ),
-			'clicked_at'    => (string) ( $row['clicked_at'] ?? '' ),
-			'utm_source'    => (string) ( $row['utm_source'] ?? '' ),
-			'utm_medium'    => (string) ( $row['utm_medium'] ?? '' ),
-			'utm_campaign'  => (string) ( $row['utm_campaign'] ?? '' ),
-			'utm_id'        => (string) ( $row['utm_id'] ?? '' ),
-			'utm_term'      => (string) ( $row['utm_term'] ?? '' ),
-			'utm_content'   => (string) ( $row['utm_content'] ?? '' ),
-			'gclid'         => (string) ( $row['gclid'] ?? '' ),
-			'fbclid'        => (string) ( $row['fbclid'] ?? '' ),
-			'msclkid'       => (string) ( $row['msclkid'] ?? '' ),
-			'ttclid'        => (string) ( $row['ttclid'] ?? '' ),
-			'li_fat_id'     => (string) ( $row['li_fat_id'] ?? '' ),
-			'twclid'        => (string) ( $row['twclid'] ?? '' ),
-			'destination'   => (string) ( $row['destination'] ?? '' ),
-			'referrer'      => (string) ( $row['referrer'] ?? '' ),
-			'is_conversion' => (bool) (int) ( $row['is_conversion'] ?? 0 ),
-			'touch'         => (string) ( $row['touch'] ?? '' ),
-			'order_total'   => ( isset( $row['order_total'] ) && null !== $row['order_total'] && '' !== $row['order_total'] ) ? (float) $row['order_total'] : null,
-			'device'        => (string) ( $row['device'] ?? '' ),
-			'channel'       => (string) ( $row['channel'] ?? '' ),
-			'custom'        => ( $custom instanceof stdClass ) ? $custom : new stdClass(),
-			'meta'          => ( $meta instanceof stdClass ) ? $meta : new stdClass(),
-			'kind'          => self::event_kind( $row ),
-		);
+		return EventsService::format_event( $row );
 	}
 
 	/**
