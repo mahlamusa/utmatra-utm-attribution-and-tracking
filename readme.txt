@@ -319,7 +319,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Fixed: ability input is coerced to its schema types, so `false` sent as a string (WordPress 6.9 and 7.0 query strings, direct `execute()` callers) stays false for `export-events`, `update-settings` and `send-test-webhook`.
 * Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 * Security: the "Allow AI agents to change settings" switch can only be saved from the dashboard (a request with a valid `wp_rest` nonce), never through an ability or an Application Password request.
-* Security: events no longer return the WooCommerce order key; the `key` argument is removed from order destinations, and from any destination or referrer whose `key` is a WooCommerce order key, in the events, journeys and export REST routes and abilities. Stored rows are unchanged.
+* Security: events no longer return the WooCommerce order key; the `key` argument is removed from order destinations, and any argument holding a WooCommerce order key is removed from every destination and referrer, in the events, journeys and export REST routes and abilities. Stored rows are unchanged.
 * Upgrade note: custom roles that are not administrator but hold `manage_options` lose access to the Utmatra screens and REST routes unless granted one of the new capabilities (or remapped with `utmatra_capability_map`).
 
 = 1.0.0 =

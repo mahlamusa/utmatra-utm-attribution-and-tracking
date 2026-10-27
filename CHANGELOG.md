@@ -34,7 +34,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - The webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
 - `allow_agent_settings` can only be saved from the dashboard (a request with a valid `wp_rest` nonce), so an ability or an Application Password request cannot switch on agent settings access.
-- Events no longer return the WooCommerce order key: the `key` argument is removed from order destinations, and from any other destination or referrer whose `key` is a WooCommerce order key (`wc_order_...`, for example a landing on, or a form or link on, an order-received or order-pay page), in `GET /events`, `/journeys`, `/journeys/<visitor>` and `/export` and in the `list-events`, `list-journeys`, `get-journey` and `export-events` abilities. Stored rows are unchanged.
+- Events no longer return the WooCommerce order key: the `key` argument is removed from order destinations, and any query argument holding a WooCommerce order key (`wc_order_...`) is removed from every destination and referrer (for example after a landing on, or a form or link on, an order-received, order-pay or download page), in `GET /events`, `/journeys`, `/journeys/<visitor>` and `/export` and in the `list-events`, `list-journeys`, `get-journey` and `export-events` abilities. Stored rows are unchanged.
 
 ### Upgrade notes
 

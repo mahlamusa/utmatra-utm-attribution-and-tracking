@@ -283,11 +283,13 @@ class EventsService {
 	 * A URL without its WooCommerce order key.
 	 *
 	 * Visit, incoming and lead rows store the landing or form page and every
-	 * row stores the referring page, so an order-received or order-pay link
-	 * carries its order key into them. The `key` argument is removed when
-	 * its value starts with `wc_order_`, or whatever it holds when
-	 * `$any_key` is set; any other URL is returned exactly as stored
-	 * (remove_query_arg() re-encodes the query string).
+	 * row stores the referring page, so an order-received, order-pay or
+	 * download link carries its order key into them (as `key`, or as `order`
+	 * on download links). Every query argument whose value starts with
+	 * `wc_order_` (any case, duplicates and array forms included) is
+	 * removed, plus `key` whatever it holds when `$any_key` is set; any
+	 * other URL is returned exactly as stored (remove_query_arg()
+	 * re-encodes the query string).
 	 *
 	 * @since 1.1.0
 	 *
@@ -297,15 +299,21 @@ class EventsService {
 	 * @return string
 	 */
 	private static function without_order_key( string $url, bool $any_key = false ): string {
-		wp_parse_str( (string) wp_parse_url( $url, PHP_URL_QUERY ), $query );
-		if ( ! isset( $query['key'] ) ) {
-			return $url;
-		}
-		if ( ! $any_key && ( ! is_string( $query['key'] ) || 0 !== strpos( $query['key'], 'wc_order_' ) ) ) {
-			return $url;
+		$names = array();
+		foreach ( explode( '&', (string) wp_parse_url( $url, PHP_URL_QUERY ) ) as $pair ) {
+			$parts = explode( '=', $pair, 2 );
+			// The argument name as remove_query_arg() parses it (decoded, `[]` dropped).
+			wp_parse_str( $parts[0] . '=', $parsed );
+			$name = (string) key( $parsed );
+			if ( '' === $name ) {
+				continue;
+			}
+			if ( ( $any_key && 'key' === $name ) || 0 === stripos( trim( urldecode( $parts[1] ?? '' ) ), 'wc_order_' ) ) {
+				$names[] = $name;
+			}
 		}
 
-		return remove_query_arg( 'key', $url );
+		return $names ? remove_query_arg( array_unique( $names ), $url ) : $url;
 	}
 
 	/**
