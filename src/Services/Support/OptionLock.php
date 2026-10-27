@@ -44,7 +44,7 @@ class OptionLock {
 	 *
 	 * @since 1.1.0
 	 *
-	 * @param string   $option   Option name.
+	 * @param string   $option   Option name, or a shared name for a group of options saved together.
 	 * @param callable $callback Returns the Result of the change.
 	 *
 	 * @return Result The callback's Result, or a 503 error when the lock is still held by another request after the timeout.

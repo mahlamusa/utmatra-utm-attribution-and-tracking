@@ -33,8 +33,8 @@ class SettingsService {
 
 	/**
 	 * Lock name shared by every settings save. The settings span several
-	 * options, all autoloaded, so OptionLock's alloptions cache drop
-	 * refreshes them all.
+	 * options, autoloaded by default, so OptionLock's alloptions cache drop
+	 * refreshes them.
 	 *
 	 * @since 1.1.0
 	 *

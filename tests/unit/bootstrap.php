@@ -858,6 +858,24 @@ $GLOBALS['wpdb'] = new Utmatra_Test_Wpdb();
 define( 'ARRAY_A', 'ARRAY_A' );
 
 /**
+ * The lock queries recorded in the test state.
+ *
+ * @since 1.1.0
+ *
+ * @return string[]
+ */
+function utmatra_test_lock_queries(): array {
+	return array_values(
+		array_filter(
+			$GLOBALS['utmatra_test']['queries'],
+			static function ( $query ) {
+				return false !== strpos( $query, '_LOCK(' );
+			}
+		)
+	);
+}
+
+/**
  * Stub of wp_cache_delete(); records the group and key.
  *
  * @since 1.1.0
