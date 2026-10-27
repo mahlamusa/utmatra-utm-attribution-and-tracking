@@ -25,7 +25,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 ### Fixed
 
-- UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can be deleted again. Their id is now limited to lowercase letters, digits, dashes and underscores. A preset saved before 1.1.0 with such a name cannot be deleted from the dashboard; save it again under the same name and the new entry replaces the old one.
+- UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. Their id is now limited to lowercase letters, digits, dashes and underscores. A preset saved before 1.1.0 with such a name cannot be deleted from the dashboard; save it again under the same name and the new entry replaces the old one.
 
 ### Security
 

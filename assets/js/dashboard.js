@@ -1874,7 +1874,7 @@
 					utm_content: elAddForm.elements.utm_content.value,
 				} ),
 			} ).then( function ( saved ) {
-				const without = allPresets.filter( function ( p ) { return p.id !== saved.id; } );
+				const without = allPresets.filter( function ( p ) { return p.id !== saved.id && p.name !== saved.name; } );
 				populatePresets( without.concat( [ saved ] ) );
 				elPresetSelect.value = saved.id;
 				elPresetDelete.hidden = false;

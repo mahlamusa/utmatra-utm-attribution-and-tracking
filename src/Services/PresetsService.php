@@ -80,11 +80,11 @@ class PresetsService {
 	 *
 	 * The id is limited to `[a-z0-9_-]` so the delete route and ability can
 	 * reach it: sanitize_title() alone percent-encodes non-ASCII names. A
-	 * stored percent-encoded id for the same name is replaced on save.
+	 * preset stored under an older id for the same name is replaced on save.
 	 *
 	 * @since 1.0.0
 	 * @since 1.1.0 Moved from RestController::create_preset(); takes an input array and returns a Result.
-	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a legacy percent-encoded id for the same name.
+	 * @since 1.1.0 Restricts the id to `[a-z0-9_-]` and replaces a preset stored under an older id for the same name.
 	 *
 	 * @param array<string, mixed> $input Keys `name`, `utm_source`, `utm_medium`, `utm_term`, `utm_content`.
 	 *
@@ -108,8 +108,8 @@ class PresetsService {
 		}
 
 		$presets = (array) get_option( self::OPTION, array() );
-		foreach ( array_keys( $presets ) as $key ) {
-			if ( (string) $key !== $id && sanitize_key( (string) $key ) === $id ) {
+		foreach ( $presets as $key => $stored ) {
+			if ( (string) $key !== $id && is_array( $stored ) && sanitize_key( sanitize_title( (string) ( $stored['name'] ?? '' ) ) ) === $id ) {
 				unset( $presets[ $key ] );
 			}
 		}
