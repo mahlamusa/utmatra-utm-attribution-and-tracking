@@ -94,6 +94,8 @@ class Bootstrap {
 		require_once $base . 'Rest/Controllers/StatsController.php';
 		require_once $base . 'Services/EventsService.php';
 		require_once $base . 'Rest/Controllers/EventsController.php';
+		require_once $base . 'Services/NotificationsService.php';
+		require_once $base . 'Rest/Controllers/NotificationsController.php';
 		require_once $base . 'Abilities/AbilityDefinition.php';
 		require_once $base . 'Abilities/EventSchema.php';
 		require_once $base . 'Abilities/OptIn.php';

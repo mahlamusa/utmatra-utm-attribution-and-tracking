@@ -31,6 +31,7 @@
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
+ * @since 1.1.0 The test email and test webhook routes delegate to NotificationsController.
  *
  * @package Utmatra\Admin
  */
@@ -42,9 +43,9 @@ use DateTimeZone;
 use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
 use Utmatra\Diagnostics\Checks;
+use Utmatra\Rest\Controllers\NotificationsController;
 use Utmatra\Rest\Controllers\SettingsController;
 use Utmatra\Reports\ConversionWebhook;
-use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Rest\Controllers\EventsController;
 use Utmatra\Rest\Controllers\StatsController;
 use Utmatra\Services\EventsService;
@@ -67,6 +68,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 GET /stats is served by Rest\Controllers\StatsController.
  * @since 1.1.0 The events and export handlers moved to EventsController and EventsService.
  * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
+ * @since 1.1.0 The test email and test webhook routes delegate to NotificationsController.
  */
 class RestController {
 
@@ -89,6 +91,7 @@ class RestController {
 	 * @since 1.1.0 The settings route uses SettingsController and accepts `allow_agent_settings`.
 	 * @since 1.1.0 GET /stats delegates to StatsController.
 	 * @since 1.1.0 Link and preset routes delegate to LinksController and PresetsController.
+	 * @since 1.1.0 The test email and test webhook routes use NotificationsController.
 	 *
 	 * @return void
 	 */
@@ -318,7 +321,7 @@ class RestController {
 			'/test-email',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( self::class, 'send_test_email' ),
+				'callback'            => array( NotificationsController::class, 'send_test_email' ),
 				'permission_callback' => array( self::class, 'check_settings_permission' ),
 			)
 		);
@@ -328,7 +331,7 @@ class RestController {
 			'/test-webhook',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( self::class, 'send_test_webhook' ),
+				'callback'            => array( NotificationsController::class, 'send_test_webhook' ),
 				'permission_callback' => array( self::class, 'check_settings_permission' ),
 				'args'                => array(
 					'preset' => array(
@@ -729,41 +732,6 @@ class RestController {
 	 */
 	private static function format_event( array $row ): array {
 		return EventsService::format_event( $row );
-	}
-
-	/**
-	 * POST utmatra/v1/test-email — send the weekly summary now.
-	 *
-	 * Sends the report regardless of the weekly toggle so admins can preview
-	 * the email and confirm delivery works before enabling the schedule.
-	 *
-	 * @since 1.0.0
-	 * @return WP_REST_Response
-	 */
-	public static function send_test_email(): WP_REST_Response {
-		return new WP_REST_Response( array( 'sent' => WeeklyEmail::send( true ) ), 200 );
-	}
-
-	/**
-	 * POST utmatra/v1/test-webhook — send a synthetic payload now.
-	 *
-	 * Lets the admin verify their receiver and HMAC signature checking work
-	 * before relying on it for real events. The optional `preset` and
-	 * `leads` args forward the live settings-form values so a preset can be
-	 * tested before it is saved. No-ops (returns sent:false) when no URL is
-	 * configured or no event is enabled.
-	 *
-	 * @since 1.0.0
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function send_test_webhook( WP_REST_Request $request ): WP_REST_Response {
-		$sent = ConversionWebhook::send_test(
-			(string) $request->get_param( 'preset' ),
-			$request->has_param( 'leads' ) ? (bool) $request->get_param( 'leads' ) : null
-		);
-
-		return new WP_REST_Response( array( 'sent' => $sent ), 200 );
 	}
 
 	/**
