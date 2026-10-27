@@ -88,6 +88,7 @@
 	const elCookieDays   = document.getElementById( 'utmatra-cookie-days' );
 	const elConsentCategory = document.getElementById( 'utmatra-consent-category' );
 	const elTrackVisits  = document.getElementById( 'utmatra-track-visits' );
+	const elAllowAgents  = document.getElementById( 'utmatra-allow-agent-settings' );
 	const elCustomParams = document.getElementById( 'utmatra-custom-params' );
 	const elChannelHint  = document.getElementById( 'utmatra-channel-hint' );
 	const elSettingsMsg  = document.getElementById( 'utmatra-settings-msg' );
@@ -2499,6 +2500,7 @@
 			leads:     elWebhookLeads ? String( !! elWebhookLeads.checked ) : 'true',
 			consent:   elConsentCategory ? String( elConsentCategory.value ) : '',
 			visits:    elTrackVisits ? String( !! elTrackVisits.checked ) : '',
+			agents:    elAllowAgents ? String( !! elAllowAgents.checked ) : '',
 			custom:    elCustomParams ? String( elCustomParams.value ) : '',
 		};
 	}
@@ -2516,6 +2518,9 @@
 		}
 		if ( elTrackVisits ) {
 			elTrackVisits.checked = 'true' === s.visits;
+		}
+		if ( elAllowAgents ) {
+			elAllowAgents.checked = 'true' === s.agents;
 		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = s.webhook;
@@ -2568,6 +2573,9 @@
 		if ( elTrackVisits ) {
 			// On unless the admin switched it off (the option defaults to on).
 			elTrackVisits.checked = undefined === settings.trackVisits || !! settings.trackVisits;
+		}
+		if ( elAllowAgents ) {
+			elAllowAgents.checked = !! settings.allowAgentSettings;
 		}
 		if ( elWebhookUrl ) {
 			elWebhookUrl.value = settings.webhookUrl || '';
@@ -2658,6 +2666,7 @@
 				consent_category: elConsentCategory ? elConsentCategory.value : 'marketing',
 				track_visits:   elTrackVisits ? elTrackVisits.checked : true,
 				custom_params:  elCustomParams ? elCustomParams.value.trim() : '',
+				allow_agent_settings: elAllowAgents ? elAllowAgents.checked : false,
 			} ),
 		} ).then( function ( body ) {
 			elRetention.value  = body.retention_days;

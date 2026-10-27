@@ -27,6 +27,7 @@
  * @since 1.0.0 Keeps a link's stored values for parameters no longer configured.
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
+ * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  *
  * @package Utmatra\Admin
  */
@@ -39,10 +40,10 @@ use stdClass;
 use Utmatra\Capabilities;
 use Utmatra\DB\Schema;
 use Utmatra\Diagnostics\Checks;
+use Utmatra\Rest\Controllers\SettingsController;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
 use Utmatra\Services\Support\DateRange;
-use Utmatra\Tracking\Attribution;
 use Utmatra\Tracking\LinkManager;
 use Utmatra\Tracking\Tracker;
 use Utmatra\Tracking\TrafficSource;
@@ -58,6 +59,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.0.0
  * @since 1.1.0 Date range helpers delegate to Services\Support\DateRange.
  * @since 1.1.0 Routes check the custom capabilities instead of manage_options.
+ * @since 1.1.0 The settings route delegates to SettingsController and accepts `allow_agent_settings`.
  */
 class RestController {
 
@@ -78,6 +80,8 @@ class RestController {
 	 * Register REST routes.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 The settings route uses SettingsController and accepts `allow_agent_settings`.
+	 *
 	 * @return void
 	 */
 	public static function register_routes(): void {
@@ -334,41 +338,44 @@ class RestController {
 			'/settings',
 			array(
 				'methods'             => 'POST',
-				'callback'            => array( self::class, 'save_settings' ),
+				'callback'            => array( SettingsController::class, 'save_settings' ),
 				'permission_callback' => array( self::class, 'check_settings_permission' ),
 				'args'                => array(
-					'retention_days'   => array(
+					'retention_days'       => array(
 						'sanitize_callback' => 'absint',
 					),
-					'weekly_email'     => array(
+					'weekly_email'         => array(
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
-					'cookie_days'      => array(
+					'cookie_days'          => array(
 						'sanitize_callback' => 'absint',
 					),
-					'webhook_url'      => array(
+					'webhook_url'          => array(
 						'sanitize_callback' => 'sanitize_text_field',
 					),
-					'webhook_preset'   => array(
+					'webhook_preset'       => array(
 						'sanitize_callback' => 'sanitize_key',
 						'validate_callback' => static function ( $value ) {
 							return in_array( $value, ConversionWebhook::PRESETS, true );
 						},
 					),
-					'webhook_orders'   => array(
+					'webhook_orders'       => array(
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
-					'webhook_leads'    => array(
+					'webhook_leads'        => array(
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
-					'consent_category' => array(
+					'consent_category'     => array(
 						'sanitize_callback' => 'sanitize_key',
 					),
-					'track_visits'     => array(
+					'track_visits'         => array(
 						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
-					'custom_params'    => array(
+					'custom_params'        => array(
 						'sanitize_callback' => 'sanitize_text_field',
+					),
+					'allow_agent_settings' => array(
+						'sanitize_callback' => 'rest_sanitize_boolean',
 					),
 				),
 			)
@@ -1295,161 +1302,6 @@ class RestController {
 	 */
 	public static function get_diagnostics(): WP_REST_Response {
 		return new WP_REST_Response( array( 'checks' => Checks::run_all() ), 200 );
-	}
-
-	/**
-	 * POST utmatra/v1/settings
-	 *
-	 * Saves the retention window (0 = keep forever), the weekly email
-	 * toggle, the webhook settings (URL — empty disables it; preset; the
-	 * order/lead event toggles), the consent category that gates the
-	 * attribution cookie (allow-listed, anything else falls back to
-	 * marketing), the untagged-visit tracking switch and the custom
-	 * parameter names (comma/space separated here; stored as a validated
-	 * array). The custom names are validated — shape, reserved names
-	 * including the public query variables, and the maximum count — before
-	 * any option is written, so a rejected list leaves every setting at its
-	 * previous value. The weekly report job is scheduled or unscheduled
-	 * here, at save time; Scheduler::heal() only recreates it if it goes
-	 * missing.
-	 *
-	 * Only the settings actually sent are changed: a parameter missing from
-	 * the request keeps its stored value, so a partial API call (e.g. only
-	 * `weekly_email`) never resets the others to defaults.
-	 *
-	 * @since 1.0.0
-	 * @since 1.0.0 Keeps the stored value of any setting not sent.
-	 * @param WP_REST_Request $request REST request.
-	 * @return WP_REST_Response
-	 */
-	public static function save_settings( WP_REST_Request $request ): WP_REST_Response {
-		$custom_names = Tracker::custom_params();
-		if ( $request->has_param( 'custom_params' ) ) {
-			$custom_names = self::validate_custom_params( self::param_string( $request, 'custom_params' ) );
-			if ( $custom_names instanceof WP_REST_Response ) {
-				return $custom_names;
-			}
-		}
-
-		$events    = ConversionWebhook::events();
-		$retention = $request->has_param( 'retention_days' ) ? absint( $request->get_param( 'retention_days' ) ) : (int) get_option( 'utmatra_retention_days', 180 );
-		$weekly    = $request->has_param( 'weekly_email' ) ? (bool) $request->get_param( 'weekly_email' ) : WeeklyEmail::enabled();
-		$cookie    = $request->has_param( 'cookie_days' ) ? absint( $request->get_param( 'cookie_days' ) ) : (int) get_option( 'utmatra_cookie_days', 90 );
-		$cookie    = min( 730, max( 1, $cookie ? $cookie : 90 ) );
-		$webhook   = $request->has_param( 'webhook_url' ) ? esc_url_raw( self::param_string( $request, 'webhook_url' ), array( 'http', 'https' ) ) : ConversionWebhook::url();
-		$preset    = $request->has_param( 'webhook_preset' ) ? self::param_string( $request, 'webhook_preset' ) : ConversionWebhook::preset();
-		if ( ! in_array( $preset, ConversionWebhook::PRESETS, true ) ) {
-			$preset = 'generic';
-		}
-		$orders  = $request->has_param( 'webhook_orders' ) ? (bool) $request->get_param( 'webhook_orders' ) : (bool) $events['orders'];
-		$leads   = $request->has_param( 'webhook_leads' ) ? (bool) $request->get_param( 'webhook_leads' ) : (bool) $events['leads'];
-		$consent = $request->has_param( 'consent_category' ) ? self::param_string( $request, 'consent_category' ) : Attribution::consent_category();
-		if ( ! in_array( $consent, Attribution::CONSENT_CATEGORIES, true ) ) {
-			$consent = 'marketing';
-		}
-		$visits = $request->has_param( 'track_visits' ) ? (bool) $request->get_param( 'track_visits' ) : 1 === (int) get_option( 'utmatra_track_visits', 1 );
-
-		update_option( 'utmatra_retention_days', $retention );
-		update_option( WeeklyEmail::OPTION, $weekly ? 1 : 0 );
-		update_option( 'utmatra_cookie_days', $cookie );
-		update_option( ConversionWebhook::OPTION_URL, $webhook );
-		update_option( ConversionWebhook::OPTION_PRESET, $preset );
-		update_option(
-			ConversionWebhook::OPTION_EVENTS,
-			array(
-				'orders' => $orders,
-				'leads'  => $leads,
-			)
-		);
-		update_option( Attribution::OPTION_CONSENT_CATEGORY, $consent );
-		update_option( 'utmatra_track_visits', $visits ? 1 : 0 );
-		update_option( 'utmatra_custom_params', $custom_names );
-
-		if ( $weekly ) {
-			WeeklyEmail::schedule();
-		} else {
-			WeeklyEmail::unschedule();
-		}
-
-		return new WP_REST_Response(
-			array(
-				'retention_days'   => $retention,
-				'weekly_email'     => $weekly,
-				'cookie_days'      => $cookie,
-				'webhook_url'      => $webhook,
-				'webhook_preset'   => $preset,
-				'webhook_orders'   => $orders,
-				'webhook_leads'    => $leads,
-				'consent_category' => $consent,
-				'track_visits'     => $visits,
-				'custom_params'    => $custom_names,
-			),
-			200
-		);
-	}
-
-	/**
-	 * Parse and validate the custom parameter names from the settings form.
-	 *
-	 * The raw input is a comma/space separated list; input is lowercased and
-	 * trimmed, duplicates collapse silently. Every name must pass
-	 * Tracker::is_valid_custom_param() with the query-var check on (save
-	 * time), and a list longer than Tracker::MAX_CUSTOM_PARAMS is
-	 * rejected. The first rejected name is named in the
-	 * error message; an empty input saves an empty list (all custom
-	 * parameters removed).
-	 *
-	 * @since 1.0.0
-	 * @param string $raw Comma/space separated names, e.g. "Coupon, aff, promo2".
-	 * @return string[]|WP_REST_Response Validated names, or a 400 response naming the rejected entry.
-	 */
-	private static function validate_custom_params( string $raw ) {
-		$names = preg_split( '/[\s,]+/', strtolower( trim( $raw ) ), -1, PREG_SPLIT_NO_EMPTY );
-		$names = array_values( array_unique( is_array( $names ) ? $names : array() ) );
-
-		foreach ( $names as $name ) {
-			if ( Tracker::is_valid_custom_param( $name, true ) ) {
-				continue;
-			}
-
-			$reserved = in_array( $name, Tracker::reserved_param_names( true ), true )
-				|| str_starts_with( $name, 'utm_' )
-				|| str_starts_with( $name, 'utmatra_' )
-				|| str_starts_with( $name, 'first_' )
-				|| str_ends_with( $name, '_first' );
-
-			return new WP_REST_Response(
-				array(
-					'message' => $reserved
-						? sprintf(
-							/* translators: %s: the rejected custom parameter name. */
-							__( '%s is reserved and cannot be used as a custom parameter.', 'utmatra-utm-attribution-and-tracking' ),
-							$name
-						)
-						: sprintf(
-							/* translators: %s: the rejected custom parameter name. */
-							__( 'Custom parameter names must start with a letter and may only use lowercase letters, digits and underscores, up to 32 characters: %s', 'utmatra-utm-attribution-and-tracking' ),
-							$name
-						),
-				),
-				400
-			);
-		}
-
-		if ( count( $names ) > Tracker::MAX_CUSTOM_PARAMS ) {
-			return new WP_REST_Response(
-				array(
-					'message' => sprintf(
-						/* translators: %d: maximum number of custom parameters. */
-						__( 'You can define up to %d custom parameters.', 'utmatra-utm-attribution-and-tracking' ),
-						Tracker::MAX_CUSTOM_PARAMS
-					),
-				),
-				400
-			);
-		}
-
-		return $names;
 	}
 
 	/**

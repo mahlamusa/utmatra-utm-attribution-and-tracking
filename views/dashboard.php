@@ -502,6 +502,17 @@ $utmatra_kses = array(
 							<p class="utmatra-field__hint"><?php esc_html_e( 'How long the first/last-touch attribution cookie lives. Longer windows attribute slower-converting visitors.', 'utmatra-utm-attribution-and-tracking' ); ?></p>
 						</div>
 					</div>
+					<div class="utmatra-field">
+						<span class="utmatra-field__label"><?php esc_html_e( 'AI agents', 'utmatra-utm-attribution-and-tracking' ); ?></span>
+						<div class="utmatra-field__control">
+							<label class="utmatra-switch" for="utmatra-allow-agent-settings">
+								<input type="checkbox" id="utmatra-allow-agent-settings" name="allow_agent_settings" class="utmatra-switch__input" />
+								<span class="utmatra-switch__track" aria-hidden="true"></span>
+								<span class="utmatra-switch__text"><?php esc_html_e( 'Allow AI agents to change settings', 'utmatra-utm-attribution-and-tracking' ); ?></span>
+							</label>
+							<p class="utmatra-field__hint"><?php esc_html_e( 'Lets AI agents connected through the WordPress Abilities API save these settings and send the test email and test webhook, as a user who can manage settings. Reading reports and managing links are not affected. Agents cannot change the webhook URL or this switch through the Abilities API. Off by default.', 'utmatra-utm-attribution-and-tracking' ); ?></p>
+						</div>
+					</div>
 					<div class="utmatra-settings-card__group">
 						<h3 class="utmatra-card__title"><?php esc_html_e( 'Consent', 'utmatra-utm-attribution-and-tracking' ); ?></h3>
 						<div class="utmatra-field">
