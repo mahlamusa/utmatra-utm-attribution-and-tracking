@@ -12,24 +12,6 @@ use Utmatra\Services\PresetsService;
 use Utmatra\Services\Support\OptionLock;
 use Utmatra\Services\Support\Result;
 
-/**
- * The lock queries recorded in the test state.
- *
- * @since 1.1.0
- *
- * @return string[]
- */
-function utmatra_test_lock_queries(): array {
-	return array_values(
-		array_filter(
-			$GLOBALS['utmatra_test']['queries'],
-			static function ( $query ) {
-				return false !== strpos( $query, '_LOCK(' );
-			}
-		)
-	);
-}
-
 return array(
 	'acquired lock runs the callback, drops the cached option and releases' => static function () {
 		$result = OptionLock::run(
