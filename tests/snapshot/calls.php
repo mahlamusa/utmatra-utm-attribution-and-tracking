@@ -4,7 +4,8 @@
  *
  * Run with `wp eval-file calls.php <out-dir>` right after seed.php. Each
  * call is dispatched in-process with rest_do_request() as the given user
- * (admin, a subscriber, or logged out), and written to
+ * (admin, a viewer holding only the view tier, a subscriber, or logged
+ * out), and written to
  * `<out-dir>/<NNN>-<name>.json` as `{ request, status, body }`.
  *
  * Masking keeps two runs identical: the site URL becomes `{home}` and
@@ -150,6 +151,7 @@ function utmatra_snapshot_mask( $value ) {
 
 $utmatra_snapshot_admin      = get_user_by( 'login', 'admin' );
 $utmatra_snapshot_subscriber = get_user_by( 'login', 'snapshot_subscriber' );
+$utmatra_snapshot_viewer     = get_user_by( 'login', 'snapshot_viewer' );
 if ( ! $utmatra_snapshot_admin ) {
 	$utmatra_snapshot_admins = get_users(
 		array(
@@ -160,12 +162,13 @@ if ( ! $utmatra_snapshot_admin ) {
 	);
 	$utmatra_snapshot_admin  = $utmatra_snapshot_admins[0] ?? null;
 }
-if ( ! $utmatra_snapshot_admin || ! $utmatra_snapshot_subscriber ) {
-	WP_CLI::error( 'Missing the admin or snapshot_subscriber user; run seed.php first.' );
+if ( ! $utmatra_snapshot_admin || ! $utmatra_snapshot_subscriber || ! $utmatra_snapshot_viewer ) {
+	WP_CLI::error( 'Missing the admin, snapshot_subscriber or snapshot_viewer user; run seed.php first.' );
 }
 $utmatra_snapshot_users = array(
 	'admin'      => (int) $utmatra_snapshot_admin->ID,
 	'subscriber' => (int) $utmatra_snapshot_subscriber->ID,
+	'viewer'     => (int) $utmatra_snapshot_viewer->ID,
 	'anon'       => 0,
 );
 
@@ -193,7 +196,7 @@ $utmatra_snapshot_calls = array(
 	array( 'events-per-page-clamped', 'GET', '/utmatra/v1/events', array( 'per_page' => 500 ), 'admin' ),
 	array( 'events-period-90', 'GET', '/utmatra/v1/events', array( 'period' => 90 ), 'admin' ),
 	array( 'events-campaign', 'GET', '/utmatra/v1/events', array( 'campaign' => 'summer-launch' ), 'admin' ),
-	array( 'events-channel', 'GET', '/utmatra/v1/events', array( 'channel' => 'paid-search' ), 'admin' ),
+	array( 'events-channel', 'GET', '/utmatra/v1/events', array( 'channel' => 'paid_search' ), 'admin' ),
 	array( 'events-kind-click', 'GET', '/utmatra/v1/events', array( 'kind' => 'click' ), 'admin' ),
 	array( 'events-kind-visit', 'GET', '/utmatra/v1/events', array( 'kind' => 'visit' ), 'admin' ),
 	array( 'events-kind-order', 'GET', '/utmatra/v1/events', array( 'kind' => 'order' ), 'admin' ),
@@ -254,7 +257,7 @@ $utmatra_snapshot_calls = array(
 	array( 'export-after-settings', 'GET', '/utmatra/v1/export', array( 'period' => 90, 'include_visits' => true ), 'admin' ),
 );
 
-// Every route and method as a subscriber (403) and logged out (401).
+// Every route and method, run below as a subscriber (403), logged out (401) and as a viewer.
 $utmatra_snapshot_routes = array(
 	array( 'stats', 'GET', '/utmatra/v1/stats' ),
 	array( 'links', 'GET', '/utmatra/v1/links' ),
@@ -276,6 +279,11 @@ foreach ( array( 'subscriber', 'anon' ) as $utmatra_snapshot_user ) {
 	foreach ( $utmatra_snapshot_routes as $utmatra_snapshot_route ) {
 		$utmatra_snapshot_calls[] = array( 'denied-' . $utmatra_snapshot_user . '-' . $utmatra_snapshot_route[0], $utmatra_snapshot_route[1], $utmatra_snapshot_route[2], array(), $utmatra_snapshot_user );
 	}
+}
+
+// Every route and method as a viewer holding only the view tier: 200 on reads, 403 on writes.
+foreach ( $utmatra_snapshot_routes as $utmatra_snapshot_route ) {
+	$utmatra_snapshot_calls[] = array( 'viewer-' . $utmatra_snapshot_route[0], $utmatra_snapshot_route[1], $utmatra_snapshot_route[2], array(), 'viewer' );
 }
 
 foreach ( $utmatra_snapshot_calls as $utmatra_snapshot_index => $utmatra_snapshot_call ) {
