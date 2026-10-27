@@ -50,7 +50,7 @@ class SendTestWebhook implements AbilityDefinition {
 	public function args(): array {
 		return array(
 			'label'               => __( 'Send a test Utmatra webhook', 'utmatra-utm-attribution-and-tracking' ),
-			'description'         => __( 'Sends a test payload to the saved conversion webhook URL now. preset and leads override the saved webhook preset and form lead toggle for this test only. Requires an administrator to allow AI agents to change settings. Returns sent: false when no webhook URL is saved, no event is enabled or the receiver did not accept the payload.', 'utmatra-utm-attribution-and-tracking' ),
+			'description'         => __( 'Sends a test payload to the saved conversion webhook URL now. preset and leads override the saved webhook preset and form lead toggle for this test only. Requires an administrator to allow AI agents to change settings. Returns sent: false when no webhook URL is saved, no event is enabled, the hubspot preset is tested without form leads or the receiver did not accept the payload.', 'utmatra-utm-attribution-and-tracking' ),
 			'input_schema'        => array(
 				'type'                 => 'object',
 				'properties'           => array(
