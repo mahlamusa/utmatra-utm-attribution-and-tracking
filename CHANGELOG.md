@@ -30,7 +30,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 
 - UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. Their id is limited to lowercase letters, digits, dashes and underscores. A preset saved before 1.1.0 with such a name cannot be deleted from the dashboard; save it again under the same name and the new entry replaces the old one.
 - Ability input is coerced to its schema types before use, so `false` sent as a query string or a string (WordPress 6.9 and 7.0 run endpoints, direct `execute()` callers) stays false: `export-events` honours `include_visits: false`, `update-settings` no longer switches booleans on, and `send-test-webhook` honours `leads: false`. The input schema of `get-settings`, `send-test-email` and `get-diagnostics` now serialises as a JSON object.
-
 - An administrator who loads a page on the request that grants the new capabilities (the first request after upgrading, or the first load of a new multisite subsite) now has them on that request, instead of seeing no Utmatra menu or a 403 from the dashboard REST routes and abilities until the next page load.
 
 ### Security

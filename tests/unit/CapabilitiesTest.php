@@ -168,8 +168,10 @@ return array(
 
 	'register without an administrator role retries later' => static function () {
 		unset( $GLOBALS['utmatra_test']['roles']['administrator'] );
+		$GLOBALS['utmatra_test']['logged_in'] = true;
 		Capabilities::register();
 		utmatra_assert_false( get_option( Capabilities::VERSION_OPTION ) );
+		utmatra_assert_same( 0, $GLOBALS['utmatra_test']['role_caps_refreshed'], 'nothing granted, nothing refreshed' );
 	},
 
 	'maybe upgrade skips a site already granted'   => static function () {

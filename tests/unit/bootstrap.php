@@ -33,7 +33,7 @@ function utmatra_test_reset(): void {
 		'queries'    => array(),
 		'db_rows'    => array(),
 		'db_var'     => '0',
-		'logged_in'  => false,
+		'logged_in'           => false,
 		'role_caps_refreshed' => 0,
 		'roles'      => array(
 			'administrator' => array( 'manage_options' => true ),
