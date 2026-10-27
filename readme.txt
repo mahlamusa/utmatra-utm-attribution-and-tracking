@@ -188,7 +188,7 @@ Utmatra registers its features with the [WordPress Abilities API](https://develo
 
 **Read** (`utmatra_view_reports`, read-only, public to MCP):
 
-* `utmatra/get-stats`, `utmatra/list-links`, `utmatra/list-events` (up to 200 per page), `utmatra/list-journeys` (up to 100 per page), `utmatra/get-journey` and `utmatra/get-diagnostics` return the same data as the matching REST routes.
+* `utmatra/get-stats`, `utmatra/list-links`, `utmatra/list-events` (up to 200 per page), `utmatra/list-journeys` (10 per page by default, up to 100), `utmatra/get-journey` and `utmatra/get-diagnostics` return the same data as the matching REST routes.
 * `utmatra/export-events` returns export rows capped by `limit` (default 500, at most 2,000), with `returned`, `total_rows`, `truncated` and a `hint`.
 * `utmatra/get-settings` returns the settings. The webhook URL is reduced to its host, and only for users who can manage settings; the webhook secret and IP salt are never returned.
 
@@ -315,6 +315,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Changed: the REST handlers now share a service layer with the abilities. REST routes, response bodies and status codes are unchanged apart from the order key removal listed under Security; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
 * Changed: the AI agent settings opt-in error and the settings, test email and test webhook ability descriptions name a user who can manage Utmatra settings instead of an administrator. The untrusted-data note on read abilities also lists the click ids and the custom and meta values.
 * Changed: the `list-events` ability accepts only the known channel slugs for `channel`, so an unknown value is rejected as invalid input instead of returning no events.
+* Changed: the `list-journeys` ability returns 10 journeys per page by default instead of 50; `per_page` still accepts up to 100. The REST route default stays 50.
 * Fixed: UTM presets with non-ASCII names (for example Chinese, Japanese or emoji) can now be deleted. A preset saved before 1.1.0 with such a name must be saved again under the same name; the new entry replaces the old one.
 * Fixed: ability input is coerced to its schema types, so `false` sent as a string (WordPress 6.9 and 7.0 query strings, direct `execute()` callers) stays false for `export-events`, `update-settings` and `send-test-webhook`.
 * Security: the webhook URL, signing secret and last webhook delivery detail are no longer sent to the dashboard for users who cannot manage settings.
