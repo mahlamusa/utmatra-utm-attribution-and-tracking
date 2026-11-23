@@ -1008,6 +1008,7 @@ require_once $utmatra_src . 'Tracking/Attribution.php';
 require_once $utmatra_src . 'Tracking/Tracker.php';
 require_once $utmatra_src . 'Tracking/LinkManager.php';
 require_once $utmatra_src . 'Reports/ConversionWebhook.php';
+require_once $utmatra_src . 'Insights/LeadAction.php';
 require_once $utmatra_src . 'Capabilities.php';
 require_once $utmatra_src . 'Services/Support/Result.php';
 require_once $utmatra_src . 'Services/Support/ResultAdapter.php';

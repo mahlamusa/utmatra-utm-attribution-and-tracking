@@ -33,6 +33,7 @@ defined( 'ABSPATH' ) || exit;
  * Recorder
  *
  * @since 1.0.0
+ * @since 1.1.0 Stores an optional `lead_id` in the lead event meta.
  */
 class Recorder {
 
@@ -99,9 +100,10 @@ class Recorder {
 	 * same value the row stored.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Accepts an optional `lead_id`, stored in the event meta.
 	 *
 	 * @param string               $integration Integration slug, e.g. 'contact-form-7', 'gravity-forms', 'ninja-forms', 'elementor', 'woocommerce'.
-	 * @param array<string, mixed> $record_data Record data. Expected keys: form_id (int|string), form_title (string), posted (array<string,string> attribution data — same shape TrafficSource::classify() expects), created_at (int, Unix timestamp), fields (optional array<string, string|array> submitted values keyed by label; never stored), is_lead (optional bool, default true), page_url (optional string; resolved from the referer when absent).
+	 * @param array<string, mixed> $record_data Record data. Expected keys: form_id (int|string), form_title (string), posted (array<string,string> attribution data — same shape TrafficSource::classify() expects), created_at (int, Unix timestamp), lead_id (optional int|string, the caller's own id for the submission; stored in the event meta), fields (optional array<string, string|array> submitted values keyed by label; never stored), is_lead (optional bool, default true), page_url (optional string; resolved from the referer when absent).
 	 *
 	 * @return void
 	 */
@@ -161,10 +163,12 @@ class Recorder {
 	 * the last touch (`posted`), no order total, and the channel passed
 	 * explicitly because the submission request's own referrer is the site
 	 * (or absent for admin-ajax/REST submissions), never the campaign that
-	 * brought the visitor. Form metadata travels in the `meta` JSON column;
-	 * the submitted field values never reach the table.
+	 * brought the visitor. Form metadata, and the caller's `lead_id` when the
+	 * record carries one, travel in the `meta` JSON column; the submitted
+	 * field values never reach the table.
 	 *
 	 * @since 1.0.0
+	 * @since 1.1.0 Stores the record's `lead_id` in the meta.
 	 *
 	 * @param string               $integration Integration slug.
 	 * @param array<string, mixed> $record_data The record (cleaned `fields` included; unused here).
@@ -190,6 +194,11 @@ class Recorder {
 			),
 			'visitor_id'    => Attribution::visitor_id(),
 		);
+
+		$lead_id = is_scalar( $record_data['lead_id'] ?? '' ) ? (string) $record_data['lead_id'] : '';
+		if ( '' !== $lead_id ) {
+			$event['meta']['lead_id'] = $lead_id;
+		}
 
 		foreach ( Tracker::param_whitelist() as $key ) {
 			$event[ $key ] = isset( $posted[ $key ] ) && is_scalar( $posted[ $key ] ) ? (string) $posted[ $key ] : '';

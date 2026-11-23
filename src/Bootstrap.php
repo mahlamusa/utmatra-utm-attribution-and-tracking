@@ -14,6 +14,7 @@
  * @since 1.1.0 Loads the notifications service and controller.
  * @since 1.1.0 Loads the diagnostics service and controller.
  * @since 1.1.0 Loads the journeys service and controller.
+ * @since 1.1.0 Loads the public lead action.
  *
  * @package Utmatra
  */
@@ -33,6 +34,7 @@ defined( 'ABSPATH' ) || exit;
  * @since 1.1.0 Loads the notifications service and controller.
  * @since 1.1.0 Loads the diagnostics service and controller.
  * @since 1.1.0 Loads the journeys service and controller.
+ * @since 1.1.0 Loads the public lead action.
  */
 class Bootstrap {
 
@@ -50,6 +52,7 @@ class Bootstrap {
 	 * @since 1.1.0 Loads the notifications service and controller.
 	 * @since 1.1.0 Loads the diagnostics service and controller.
 	 * @since 1.1.0 Loads the journeys service and controller.
+	 * @since 1.1.0 Loads the public lead action.
 	 * @return void
 	 */
 	public static function load(): void {
@@ -67,6 +70,7 @@ class Bootstrap {
 		require_once $base . 'Reports/WeeklyEmail.php';
 		require_once $base . 'Reports/ConversionWebhook.php';
 		require_once $base . 'Insights/Recorder.php';
+		require_once $base . 'Insights/LeadAction.php';
 		require_once $base . 'Insights/Insights.php';
 		require_once $base . 'Rest/CollectController.php';
 		require_once $base . 'Integrations/WooCommerce.php';

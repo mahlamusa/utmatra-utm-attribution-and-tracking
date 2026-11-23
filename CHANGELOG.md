@@ -17,6 +17,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 - "Allow AI agents to change settings" switch on the dashboard settings card (option `utmatra_allow_agent_settings`, off by default), required for the settings, test email and test webhook abilities. The `utmatra_abilities_allow_settings_writes` filter overrides it.
 - Guard rails for agents: the webhook URL cannot be changed through an ability; retention set through an ability is 0 or 30 to 3,650 days; `delete-link` and `delete-preset` require `confirm: true`; `export-events` returns at most 2,000 rows with `returned`, `total_rows` and `truncated`; the descriptions of read abilities that return visitor-recorded data mark it as untrusted.
 - `utmatra_ability_executed` action, fired after a write ability runs with the ability id, user id and input keys (never the values): after a successful change for links, presets and settings, after every send attempt for the test email and test webhook.
+- `utmatra_record_lead` action for forms without a bundled adapter: `do_action( 'utmatra_record_lead', $lead )` records the submission as a lead the same way the adapters do. The lead array takes `source` (required slug), `form_id`, `form_title`, `lead_id` (stored in the event `meta`), `url` and `fields` (never stored; sent to the lead webhook).
 
 ### Changed
 
