@@ -278,6 +278,8 @@ Actions:
 
 * **`utmatra_lead_recorded`** *(receives the integration slug and the lead record)* — fires after an attributed form submission has been recorded as a lead conversion. The record holds `form_id`, `form_title`, `posted` (the attribution data), `created_at`, `page_url` and `fields` (the cleaned submitted values, which the plugin itself never stores). The lead webhook listens on this action.
 * **`utmatra_ability_executed`** — see the AI agents FAQ.
+* **`utmatra_record_lead`** *(call it with `do_action()`, passing one lead array)* — records a submission of a form that has no bundled adapter as a lead, exactly like the adapters do: a lead conversion row built from the visitor's last touch, a recent-leads widget entry and `utmatra_lead_recorded` (and so the lead webhook). Nothing is recorded when the visitor carries no attribution data. Keys: `source` (required, a slug naming your plugin or theme, e.g. `my-theme`; do not reuse a bundled adapter's slug such as `contact-form-7`), `form_id`, `form_title`, `lead_id` (your own id for the submission, up to 64 characters, kept in the event's `meta`), `url` (the page the form is on; defaults to the request referer) and `fields` (submitted values keyed by label; never stored, but sent to the lead webhook, so leave it out for data that must not leave the site). Check `has_action( 'utmatra_record_lead' )` first to support versions without it.
+    `do_action( 'utmatra_record_lead', array( 'source' => 'my-theme', 'form_id' => 'contact', 'lead_id' => $entry_id ) );`
 
 == REST API ==
 
@@ -311,6 +313,7 @@ Logged-in users with that capability can also call the routes from the dashboard
 * Added: "Allow AI agents to change settings" switch on the dashboard settings card (off by default), required for the settings, test email and test webhook abilities. The `utmatra_abilities_allow_settings_writes` filter overrides it.
 * Added: guard rails for agents: the webhook URL cannot be changed through an ability, retention set by an ability is 0 or 30 to 3,650 days, deleting a link or preset needs `confirm: true`, and the export ability returns at most 2,000 rows with a `truncated` flag.
 * Added: `utmatra_ability_executed` action, fired after a write ability runs, with the ability id, user id and input keys (never the values).
+* Added: `utmatra_record_lead` action, so a theme or plugin can record a submission of its own form as a lead without calling internal classes. See the filter and action reference.
 * Changed: the dashboard menu, the admin Dashboard widget and the `utmatra/v1` REST routes check the new capabilities instead of `manage_options`. Administrators keep full access.
 * Changed: the REST handlers now share a service layer with the abilities. REST routes, response bodies and status codes are unchanged apart from the order key removal listed under Security; `POST /settings` accepts one new optional argument, `allow_agent_settings`, saved only from the dashboard.
 * Changed: the AI agent settings opt-in error and the settings, test email and test webhook ability descriptions name a user who can manage Utmatra settings instead of an administrator. The untrusted-data note on read abilities also lists the click ids and the custom and meta values.

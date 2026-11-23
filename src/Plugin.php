@@ -5,6 +5,7 @@
  * @since 1.0.0
  * @since 1.1.0 Wires the abilities registrar.
  * @since 1.1.0 Grants the custom capabilities on activation and upgrade.
+ * @since 1.1.0 Registers the public lead action.
  *
  * @package Utmatra
  */
@@ -14,6 +15,7 @@ namespace Utmatra;
 use Utmatra\Abilities\AbilitiesRegistrar;
 use Utmatra\DB\Schema;
 use Utmatra\DB\Retention;
+use Utmatra\Insights\LeadAction;
 use Utmatra\Privacy\PrivacyPolicy;
 use Utmatra\Reports\ConversionWebhook;
 use Utmatra\Reports\WeeklyEmail;
@@ -85,6 +87,7 @@ class Plugin {
 	 * @since 1.0.0 Registers the schedule-heal hook.
 	 * @since 1.1.0 Hooks the abilities registrar.
 	 * @since 1.1.0 Hooks the capabilities upgrade.
+	 * @since 1.1.0 Registers the public lead action.
 	 * @return void
 	 */
 	private function init_hooks(): void {
@@ -120,6 +123,10 @@ class Plugin {
 		// Lead webhook: deliver every attributed form submission recorded by
 		// the Insights\Recorder to the configured webhook URL.
 		add_action( 'utmatra_lead_recorded', array( ConversionWebhook::class, 'send_lead' ), 10, 2 );
+
+		// Public `utmatra_record_lead` action: custom forms report a lead
+		// without calling the internal Recorder.
+		LeadAction::register();
 
 		// Suggested privacy policy text.
 		add_action( 'admin_init', array( PrivacyPolicy::class, 'register' ) );
